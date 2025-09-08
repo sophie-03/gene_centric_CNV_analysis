@@ -1,0 +1,651 @@
+## Set up
+
+```{r}
+#| echo: false
+
+
+library(readxl)
+library(ggplot2)
+library(dplyr)
+```
+
+```{r}
+#| echo: false
+
+#read in COSMIC sample data
+sample_info <- read.table("~/Documents/PhD/Chap1/Xchr/Data/Cosmic_Sample_v101_GRCh38.tsv", sep = "\t", fill = TRUE, header = TRUE)
+#subset for gender info only
+gender_info <- sample_info[, c("COSMIC_SAMPLE_ID", "GENDER")]
+
+#read in COSMIC mutation data
+mutation_data <- read.table("~/Documents/PhD/Chap1/Xchr/Data/Cosmic_MutantCensus_v101_GRCh38.tsv", sep = "\t", fill = TRUE, header = TRUE)
+#merge gender data
+mutation_data <- left_join(mutation_data, gender_info, by = "COSMIC_SAMPLE_ID")
+
+#read in COSMIC list of cancer genes
+cancer_genes <- read.table("~/Documents/PhD/Chap1/Xchr/Data/Cosmic_Gene_Census_23-3-2022.tsv", sep = "\t", header = TRUE, fill = TRUE)
+
+#FILTER FOR GENES ON X CHR
+x_mutations <- mutation_data[mutation_data$CHROMOSOME == "X", ]
+
+#read in x chromosome genes
+x_genes <- read_excel("~/Documents/PhD/Chap1/Xchr/Data/XCI_consenus_Balaton2015.xlsx")
+colnames(x_genes) <- gsub(" ", "_", colnames(x_genes))
+
+
+#get x chr genes that do not have y homology
+#x_no_y_homology <- x_genes %>% #excludes PAR, Y homologs and pseudogenes
+#  filter(is.na(Y_homology))
+x_no_y_homology <- x_genes %>% 
+  dplyr::filter(!Y_homology %in% c("PAR", "PAR2"))
+
+#mutations
+x_no_y_mutations <- x_mutations %>%
+  dplyr::filter(GENE_SYMBOL %in% x_no_y_homology$Gene_Name)
+
+#get x chr genes that do have equivalent y genes
+x_y_homology <- x_genes %>%
+  dplyr::filter(!is.na(Y_homology))
+#mutations
+x_y_mutations <- x_mutations %>%
+  dplyr::filter(GENE_SYMBOL %in% x_y_homology$Gene_Name)
+
+#get PAR only x genes
+par_genes <- x_genes %>%
+  dplyr::filter(Y_homology %in% c("PAR","PAR2"))
+#mutations
+par_mutations <- x_mutations %>%
+  dplyr::filter(GENE_SYMBOL %in% par_genes$Gene_Name)
+
+
+#get EI genes with no y homolgy
+ei_genes <- x_no_y_homology %>% dplyr::filter(Balaton_consensus_calls %in% c("E", "Mostly E"))
+#mutations
+ei_mutations <- x_mutations %>%
+  dplyr::filter(GENE_SYMBOL %in% ei_genes$Gene_Name)
+
+#get inactivated genes with no y homology
+i_genes <- x_no_y_homology %>% dplyr::filter(!Balaton_consensus_calls %in% c("E", "Mostly E"))
+i_mutations <- x_mutations %>%
+  dplyr::filter(GENE_SYMBOL %in% i_genes$Gene_Name)
+
+```
+
+## Genes
+
+**PAR:** The PARs are small regions at the tips of the X and Y chromosomes that contain sequences that are nearly identical between the two chromosomes. There are two PARs: PAR1 at the tip of the short arms (Xp and Yp) and PAR2 at the tip of the long arms (Xq and Yq). Genes within the PARs undergo recombination during meiosis, similar to autosomes. This means that males inherit one copy of each PAR gene from their mother and one from their father. Because of this recombination, genes in the PAR regions behave like autosomal genes in terms of inheritance patterns, even though they are located on the sex chromosomes. This is why they are called "pseudoautosomal."
+
+**Y homolog:** A Y homolog is a gene on the Y chromosome that has a counterpart (or homolog) on the X chromosome. These genes are often derived from a common ancestral gene but have diverged over time due to the different evolutionary pressures on the X and Y chromosomes. Unlike genes in the PAR, Y homologs do not typically undergo recombination with their X counterparts. Instead, they evolve independently. Despite this, they often retain some functional similarity. The presence of Y homologs can sometimes result in dosage compensation mechanisms, where expression levels of the X-linked gene might be adjusted to balance with the Y-linked gene. However, the degree of similarity and functionality between X and Y homologs can vary widely.
+
+**Y pseudogenes**: A Y pseudogene is a non-functional remnant of a gene that was once functional but has accumulated mutations over time, rendering it incapable of producing a functional protein. These pseudogenes may still share sequence similarity with their X-linked counterparts but lack key elements necessary for gene expression or function. Since Y pseudogenes are non-functional, they do not contribute to the phenotype in the same way as active genes. However, they can still provide insight into the evolutionary history of the Y chromosome and the genes that were once present.
+
+**I am excluding all genes that are in the PAR region, but am keeping in genes with pseudogenes or homologs on the Y chromosome because although they mak ebe functionally similar they will be labelled differently, so a mutation in one of those genes won't be classified as a mutation onn the x gene (they're not exact copies).**
+
+```{r}
+#| echo: false
+
+cat("Number of genes on X chromosome:", length((x_genes$Gene_Name)), "\n \n")
+
+##
+
+cat("Number of genes on X chromosome not in the PAR region:", length(x_no_y_homology$Gene_Name), "\n")
+
+cat("\t Number of genes on X chromosome not in the PAR region and escape inactivation:", x_no_y_homology %>%
+  dplyr::filter(Balaton_consensus_calls %in% c("E", "Mostly E")) %>%
+  nrow(), "\n")
+
+cat("\t Number of genes on X chromosome not in the PAR region and is inactivated:", 1117-55, "\n\n")
+
+##
+
+cat("Number of genes on X chromosome with Y homolog/PAR/pseudogene:", 1145-823, "\n")
+
+cat("\t Number of genes on X chromosome that have gene in Y PAR:", x_genes %>%
+  dplyr::filter(Y_homology %in% c("PAR","PAR2")) %>%
+  nrow(), "\n")
+
+cat("\t Number of genes on X chromosome that have Y homolog:", x_genes %>%
+  dplyr::filter(Y_homology %in% c("Y homolog")) %>%
+  nrow(), "\n")
+
+cat("\t Number of genes on X chromosome that have gene Y pseudogene:", x_genes %>%
+  dplyr::filter(Y_homology %in% c("Y pseudogene")) %>%
+  nrow(), "\n\n")
+
+cat("Number of genes on X chromosome that escape inactivation:", x_genes %>%
+  dplyr::filter(Balaton_consensus_calls %in% c("E", "Mostly E","PAR")) %>%
+  nrow(), "\n")
+
+
+```
+
+## TSGs and Oncogenes
+
+```{r}
+#| echo: false
+
+#subset cancer genes for those on X
+x_cancer_genes_list <- cancer_genes[grepl("^X:", cancer_genes$Genome_Location), ]
+
+cat("Number of cancer genes on the X chr:", nrow(x_cancer_genes_list), "\n")
+
+#subset x_genes for cancer genes
+x_cancer_genes <- x_genes[x_genes$Gene_Name %in% x_cancer_genes_list$Gene_Symbol, ]
+
+#how many x genes with no y equiv genes are cancer genes
+x_no_y_homology_cancer_genes <- x_no_y_homology %>%
+  dplyr::filter(Gene_Name %in% x_cancer_genes$Gene_Name)
+cat("Number of X cancer genes that have no Y equivalent:", nrow(x_no_y_homology_cancer_genes), "\n")
+
+#get details of these genes 
+x_no_y_cancer_gene_info <- x_cancer_genes_list %>%
+  dplyr::filter(Gene_Symbol %in% x_no_y_homology_cancer_genes$Gene_Name)
+```
+
+## Mutations
+
+In genes on the X chr (with no homologs in y) are there more mutations in females than males due to them having a higher copy number of the X chr?
+
+```{r}
+#| echo: false
+
+cat("Number of genes on X chromosome with mutation in COSMIC data:", length(unique(x_mutations$GENE_SYMBOL)), "\n")
+
+cat("Number of genes on X chromosome with mutation in COSMIC data and no Y homolog:", length(unique(x_no_y_mutations$GENE_SYMBOL)), "\n")
+```
+
+### Gender Info
+
+```{r}
+#| echo: false
+
+#subset mutation data for individuals we have gender for
+mutation_data_gender <- mutation_data[mutation_data$GENDER %in% c("m", "f"), ]
+
+#how many individuals do we have mutation data for (and gender)
+cat("Number of individuals:", length(unique(mutation_data_gender$COSMIC_SAMPLE_ID)), "\n")
+#how many females
+cat("\t Number of females:", mutation_data_gender %>%
+  dplyr::filter(tolower(GENDER) == "f") %>%
+  distinct(COSMIC_SAMPLE_ID) %>%
+  nrow(), "\n")
+#how many males
+cat("\t Number of males:", mutation_data_gender %>%
+  dplyr::filter(tolower(GENDER) == "m") %>%
+  distinct(COSMIC_SAMPLE_ID) %>%
+  nrow(), "\n")
+```
+
+### Individual Proportions
+
+For each individual, what proportion of their mutations appear in genes that are on the X chromosome, in genes with no Y homology?
+
+```{r}
+#| echo: false
+
+# TOTAL MUTATION COUNT
+#for each individual (with gender info) get the total number of mutations 
+mutation_count <- mutation_data_gender %>%
+  dplyr::group_by(COSMIC_SAMPLE_ID) %>%
+  dplyr::summarise(total_count = n(), .groups = 'drop')
+#get the number of mutations on the X chromosome for each individual
+mutation_count <- mutation_data_gender %>%
+  dplyr::group_by(COSMIC_SAMPLE_ID) %>%
+  dplyr::summarise(
+    total_count = n(),
+    x_count = sum(CHROMOSOME == "X"),
+    .groups = 'drop'
+  )
+
+# X GENES WITH NO Y EQUIVALENT COUNT
+#get the number of mutation on x that are in genes with no y equivalent
+x_no_y_count_data <- x_no_y_mutations %>%
+  dplyr::group_by(COSMIC_SAMPLE_ID) %>%
+  dplyr::summarise(x_no_y_count = n(), .groups = 'drop')
+# Join the x_no_y_count_data with mutation_count
+mutation_count <- mutation_count %>%
+  left_join(x_no_y_count_data, by = "COSMIC_SAMPLE_ID") %>%
+  mutate(x_no_y_count = coalesce(x_no_y_count, 0))
+# proportion of mutations 
+mutation_count$prop_x_no_y <- mutation_count$x_no_y_count / mutation_count$total_count
+
+# X GENES WITH Y EQUIVALENT
+#get the number of mutation on x that are in genes with a y equivalent
+x_y_count_data <- x_y_mutations %>%
+  dplyr::group_by(COSMIC_SAMPLE_ID) %>%
+  dplyr::summarise(x_y_count = n(), .groups = 'drop')
+# Join the x_y_count_data with mutation_count
+mutation_count <- mutation_count %>%
+  left_join(x_y_count_data, by = "COSMIC_SAMPLE_ID") %>%
+  mutate(x_y_count = coalesce(x_y_count, 0))
+# proportion of mutations 
+mutation_count$prop_x_y <- mutation_count$x_y_count / mutation_count$total_count
+
+# PAR GENES
+#get the number of mutations on x that are in genes with a PAR y equivalent
+par_count_data <- par_mutations %>%
+  dplyr::group_by(COSMIC_SAMPLE_ID) %>%
+  dplyr::summarise(par_count = n(), .groups = 'drop')
+# Join the x_y_count_data with mutation_count
+mutation_count <- mutation_count %>%
+  left_join(par_count_data, by = "COSMIC_SAMPLE_ID") %>%
+  mutate(par_count = coalesce(par_count, 0))
+# proportion of mutations 
+mutation_count$prop_par <- mutation_count$par_count / mutation_count$total_count
+
+#add gender 
+mutation_count <- left_join(mutation_count, gender_info, by = "COSMIC_SAMPLE_ID")
+
+#filter for individual with >20 mutations
+filtered_mutation_count <- mutation_count[mutation_count$total_count > 20, ]
+
+
+
+
+
+```
+
+#### No Y equivalent genes
+
+This also happens to be the analysis for X genes that are inactivated because there is no somatic mutation data for the 23 X-linked genes that have no Y homology and escape inactivation.
+
+```{r}
+#| echo: false
+
+#t-test to see whether females and males have diferent proportions of mutations in genes on the x chr with no y equiv
+female_data <- filtered_mutation_count[filtered_mutation_count$GENDER == "f", ]
+male_data <- filtered_mutation_count[filtered_mutation_count$GENDER == "m", ]
+# Perform the t-test
+t.test(female_data$prop_x_no_y, male_data$prop_x_no_y)
+
+# MEANS
+mean(female_data$prop_x_no_y)
+mean(male_data$prop_x_no_y)
+
+# Create the boxplot
+no_y_plot <- ggplot(filtered_mutation_count, aes(x = GENDER, y = prop_x_no_y, fill = GENDER)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "black", outlier.shape = 16) +
+  labs(
+    x = "Gender",
+    y = "Proportion of somatic mutations"
+  ) +
+  scale_x_discrete(labels = c("f" = "Female", "m" = "Male")) +  # Rename x-axis categories
+  ggtitle("(A)") +
+  theme_minimal() +  # Use minimal theme
+  theme(panel.grid = element_blank(),  # Remove grid lines
+        legend.position = "none",  # Remove legend
+        axis.line = element_line(color = "black"), # Add axis lines
+        plot.title = element_text(hjust = -0.03, vjust=2.12))  +
+    annotate("text", x = 2.3, y = max(filtered_mutation_count$prop_x_no_y) * 1.05, 
+           label = "p = <2.2e-16", size = 6, fontface = "bold")
+
+no_y_plot
+```
+
+#### Y equivalent genes
+
+Just look at genes with equivalent genes in Y (PAR/homolog/psuedogenes)
+
+```{r}
+#| echo: false
+
+#t-test to see whether females and males have diferent proportions of mutations in genes on the x chr with no y equiv
+female_data <- filtered_mutation_count[filtered_mutation_count$GENDER == "f", ]
+male_data <- filtered_mutation_count[filtered_mutation_count$GENDER == "m", ]
+# Perform the t-test
+t.test(female_data$prop_x_y, male_data$prop_x_y)
+
+# Create the boxplot
+ggplot(filtered_mutation_count, aes(x = GENDER, y = prop_x_y, fill = GENDER)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "black", outlier.shape = 16) +
+  #geom_jitter(width = 0.2, color = "darkblue", alpha = 0.5) +
+  labs(
+       x = "Gender",
+       y = "Proportion of somatic mutations on chrX genes \nthat have Y counterparts") +
+  #scale_fill_manual(values = c("M" = "blue", "F" = "red")) +
+  theme_minimal()
+
+
+
+```
+
+#### PAR genes
+
+When looking at genes that appear on both X and Y, it's probably best to only look at PAR genes. Because they are labelled as the same gene name as both X and Y (and annotated as being on the X chr), whereas homologs and pseudogenes won't have the same gene name, so you can't compare mutation rates directly.
+
+```{r}
+#| echo: false
+
+#t-test to see whether females and males have diferent proportions of mutations in genes on the x chr with PAR equiv
+female_data <- filtered_mutation_count[filtered_mutation_count$GENDER == "f", ]
+male_data <- filtered_mutation_count[filtered_mutation_count$GENDER == "m", ]
+# Perform the t-test
+t.test(female_data$prop_par, male_data$prop_par)
+
+# Create the boxplot
+par_plot <- ggplot(filtered_mutation_count, aes(x = GENDER, y = prop_par, fill = GENDER)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "black", outlier.shape = 16) +
+  #geom_jitter(width = 0.2, color = "darkblue", alpha = 0.5) +
+  labs(
+       x = "Gender",
+       y = "Proportion of somatic mutations ") +
+  scale_x_discrete(labels = c("f" = "Female", "m" = "Male")) +  # Rename x-axis categories
+  ggtitle("(B)") +
+  theme_minimal() +  # Use minimal theme
+  theme(panel.grid = element_blank(),  # Remove grid lines
+        legend.position = "none",  # Remove legend
+        axis.line = element_line(color = "black"), # Add axis lines
+        plot.title = element_text(hjust = -0.03, vjust=2.12))  +
+    annotate("text", x = 2.3, y = max(filtered_mutation_count$prop_x_no_y) * 1.05, 
+           label = "p = 0.54", size = 6, fontface = "bold")
+
+par_plot
+```
+
+#### EI
+
+Genes that escape inactivation and are not PAR: no somatic mutation data for the 23 genes only found on chrX and escape inactivation.
+
+### Aggregate Proportions
+
+Calculate the proportion of mutations on the X axis in males and females by aggregating the total number of mutations for each sex.
+
+```{r}
+
+# when looking at individuals it makes sense to filter out individuals with a low number of mutations, but we don't need to do that for aggregate calculations
+female_mutation_data <- mutation_data %>% dplyr::filter(GENDER == "f")
+male_mutation_data <- mutation_data %>% dplyr::filter(GENDER == "m")
+
+## ALL GENES
+sum(female_mutation_data$CHROMOSOME == "X") / nrow(female_mutation_data)
+sum(male_mutation_data$CHROMOSOME == "X") / nrow(male_mutation_data)
+# this is the values we would expect
+
+
+```
+
+#### No PAR
+
+```{r}
+
+## GENES IN X NOT Y
+female_x_no_y_mutations <- x_no_y_mutations %>% dplyr::filter(GENDER == "f")
+male_x_no_y_mutations <- x_no_y_mutations %>% dplyr::filter(GENDER == "m")
+nrow(female_x_no_y_mutations) / nrow(female_mutation_data)
+nrow(male_x_no_y_mutations) / nrow(male_mutation_data)
+# Z TEST
+female_prop <- nrow(female_x_no_y_mutations) / nrow(female_mutation_data)
+male_prop <- nrow(male_x_no_y_mutations) / nrow(male_mutation_data)
+n_female <- nrow(female_mutation_data)
+n_male <- nrow(male_mutation_data)
+prop.test(x = c(female_prop, male_prop), n = c(n_female, n_male), correct = FALSE)
+
+female_x_mutations <- female_mutation_data %>% dplyr::filter(female_mutation_data$CHROMOSOME == "X")
+nrow(female_x_no_y_mutations) / nrow (female_x_mutations)
+# genes not in the PAR region are 98% of genes 
+0.0454 / 0.0515
+
+# CHI SQUARED
+X_f <- nrow(female_x_no_y_mutations)   # X mutations in females
+N_f <- nrow(female_mutation_data)   # Total mutations in females
+X_m <- nrow(male_x_no_y_mutations)     # X mutations in males
+N_m <- nrow(male_mutation_data)     # Total mutations in males
+# Create contingency table
+mutation_table <- matrix(c(X_f, N_f - X_f, X_m, N_m - X_m), 
+                         nrow = 2, byrow = TRUE)
+# Add row and column names for clarity
+rownames(mutation_table) <- c("Female", "Male")
+colnames(mutation_table) <- c("X Chromosome", "Other Chromosomes")
+#test
+chisq.test(mutation_table)$p.value
+
+
+# PLOT
+# Calculate standard error (SE) and confidence intervals (95% CI)
+se_female <- sqrt((female_prop * (1 - female_prop)) / n_female)
+se_male <- sqrt((male_prop * (1 - male_prop)) / n_male)
+ci_female <- 1.96 * se_female
+ci_male <- 1.96 * se_male
+# Create a dataframe for plotting
+plot_data <- data.frame(
+  Gender = c("Female", "Male"),
+  Proportion = c(female_prop, male_prop),
+  Lower_CI = c(female_prop - ci_female, male_prop - ci_male),
+  Upper_CI = c(female_prop + ci_female, male_prop + ci_male)
+)
+# Plot
+no_PAR_aggregate_plot <- ggplot(plot_data, aes(x = Gender, y = Proportion, fill = Gender)) +
+  geom_bar(stat = "identity", color = "black", width = 0.6) +
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+  labs(
+    y = "Proportion of Mutations on X Chromosome (excluding PAR)",
+    x = "Gender"
+  ) +
+  ylim(0, 0.05) +
+  ggtitle("(A)") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",           # Remove legend
+    panel.grid = element_blank(),       # Remove grid lines
+    axis.line = element_line(color = "black"),  # Add x and y axis lines
+    plot.title = element_text(hjust = -0.07, vjust=2.12)
+  )
+
+no_PAR_aggregate_plot
+```
+
+#### PAR genes
+
+```{r}
+
+## PAR GENES
+female_par_mutations <- par_mutations %>% dplyr::filter(GENDER == "f")
+male_par_mutations <- par_mutations %>% dplyr::filter(GENDER == "m")
+nrow(female_par_mutations) / nrow(female_mutation_data)
+nrow(male_par_mutations) / nrow(male_mutation_data)
+
+# Z TEST
+female_prop <- nrow(female_par_mutations) / nrow(female_mutation_data)
+male_prop <- nrow(male_par_mutations) / nrow(male_mutation_data)
+prop.test(x = c(female_prop, male_prop), n = c(nrow(female_data),nrow(male_mutation_data)), correct = FALSE)
+
+# CHI SQUARED
+X_f <- nrow(female_par_mutations)   # X mutations in females
+N_f <- nrow(female_mutation_data)   # Total mutations in females
+X_m <- nrow(male_par_mutations)     # X mutations in males
+N_m <- nrow(male_mutation_data)     # Total mutations in males
+# Create contingency table
+mutation_table <- matrix(c(X_f, N_f - X_f, X_m, N_m - X_m), 
+                         nrow = 2, byrow = TRUE)
+# Add row and column names for clarity
+rownames(mutation_table) <- c("Female", "Male")
+colnames(mutation_table) <- c("X Chromosome", "Other Chromosomes")
+#test
+chisq.test(mutation_table)
+
+
+# PLOT
+# Calculate standard error (SE) and confidence intervals (95% CI)
+se_female <- sqrt((female_prop * (1 - female_prop)) / n_female)
+se_male <- sqrt((male_prop * (1 - male_prop)) / n_male)
+ci_female <- 1.96 * se_female
+ci_male <- 1.96 * se_male
+# Create a dataframe for plotting
+plot_data <- data.frame(
+  Gender = c("Female", "Male"),
+  Proportion = c(female_prop, male_prop),
+  Lower_CI = c(female_prop - ci_female, male_prop - ci_male),
+  Upper_CI = c(female_prop + ci_female, male_prop + ci_male)
+)
+# Plot
+PAR_aggregate_plot <- ggplot(plot_data, aes(x = Gender, y = Proportion, fill = Gender)) +
+  geom_bar(stat = "identity", color = "black", width = 0.6) +
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+  labs(
+    y = "Proportion of Mutations on PAR",
+    x = "Gender"
+  ) +
+  ylim(0, 0.005) +
+  ggtitle("(B)") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",           # Remove legend
+    panel.grid = element_blank(),       # Remove grid lines
+    axis.line = element_line(color = "black"),  # Add x and y axis lines
+    plot.title = element_text(hjust = -0.07, vjust=2.12)
+  )
+
+PAR_aggregate_plot
+```
+
+#### EI genes with no PAR
+
+```{r}
+
+## EI GENES
+female_ei_mutations <- ei_mutations %>% dplyr::filter(GENDER == "f")
+male_ei_mutations <- ei_mutations %>% dplyr::filter(GENDER == "m")
+nrow(female_ei_mutations) / nrow(female_mutation_data)
+nrow(male_ei_mutations) / nrow(male_mutation_data)
+# Z TEST
+female_prop <- nrow(female_ei_mutations) / nrow(female_mutation_data)
+male_prop <- nrow(male_ei_mutations) / nrow(male_mutation_data)
+prop.test(x = c(female_prop, male_prop), n = c(nrow(female_data),nrow(male_mutation_data)), correct = FALSE)
+
+# CHI SQUARED
+X_f <- nrow(female_ei_mutations)   # X mutations in females
+N_f <- nrow(female_mutation_data)   # Total mutations in females
+X_m <- nrow(male_ei_mutations)     # X mutations in males
+N_m <- nrow(male_mutation_data)     # Total mutations in males
+# Create contingency table
+mutation_table <- matrix(c(X_f, N_f - X_f, X_m, N_m - X_m), 
+                         nrow = 2, byrow = TRUE)
+# Add row and column names for clarity
+rownames(mutation_table) <- c("Female", "Male")
+colnames(mutation_table) <- c("X Chromosome", "Other Chromosomes")
+#test
+chisq.test(mutation_table)$p.value
+
+
+# PLOT
+# Calculate standard error (SE) and confidence intervals (95% CI)
+se_female <- sqrt((female_prop * (1 - female_prop)) / n_female)
+se_male <- sqrt((male_prop * (1 - male_prop)) / n_male)
+ci_female <- 1.96 * se_female
+ci_male <- 1.96 * se_male
+# Create a dataframe for plotting
+plot_data <- data.frame(
+  Gender = c("Female", "Male"),
+  Proportion = c(female_prop, male_prop),
+  Lower_CI = c(female_prop - ci_female, male_prop - ci_male),
+  Upper_CI = c(female_prop + ci_female, male_prop + ci_male)
+)
+# Plot
+ggplot(plot_data, aes(x = Gender, y = Proportion, fill = Gender)) +
+  geom_bar(stat = "identity", color = "black", width = 0.6) +
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+  labs(
+    y = "Proportion of Mutations on X Chromosome",
+    x = "Gender"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",           # Remove legend
+    panel.grid = element_blank(),       # Remove grid lines
+    axis.line = element_line(color = "black")  # Add x and y axis lines
+  )
+
+```
+
+#### Inactivated genes with no par
+
+```{r}
+
+## I GENES
+female_i_mutations <- i_mutations %>% dplyr::filter(GENDER == "f")
+male_i_mutations <- i_mutations %>% dplyr::filter(GENDER == "m")
+nrow(female_i_mutations) / nrow(female_mutation_data)
+nrow(male_i_mutations) / nrow(male_mutation_data)
+# Z TEST
+female_prop <- nrow(female_i_mutations) / nrow(female_mutation_data)
+male_prop <- nrow(male_i_mutations) / nrow(male_mutation_data)
+prop.test(x = c(female_prop, male_prop), n = c(nrow(female_data),nrow(male_mutation_data)), correct = FALSE)
+
+# CHI SQUARED
+X_f <- nrow(female_i_mutations)   # X mutations in females
+N_f <- nrow(female_mutation_data)   # Total mutations in females
+X_m <- nrow(male_i_mutations)     # X mutations in males
+N_m <- nrow(male_mutation_data)     # Total mutations in males
+# Create contingency table
+mutation_table <- matrix(c(X_f, N_f - X_f, X_m, N_m - X_m), 
+                         nrow = 2, byrow = TRUE)
+# Add row and column names for clarity
+rownames(mutation_table) <- c("Female", "Male")
+colnames(mutation_table) <- c("X Chromosome", "Other Chromosomes")
+#test
+chisq.test(mutation_table)$p.value
+
+
+# PLOT
+# Calculate standard error (SE) and confidence intervals (95% CI)
+se_female <- sqrt((female_prop * (1 - female_prop)) / n_female)
+se_male <- sqrt((male_prop * (1 - male_prop)) / n_male)
+ci_female <- 1.96 * se_female
+ci_male <- 1.96 * se_male
+# Create a dataframe for plotting
+plot_data <- data.frame(
+  Gender = c("Female", "Male"),
+  Proportion = c(female_prop, male_prop),
+  Lower_CI = c(female_prop - ci_female, male_prop - ci_male),
+  Upper_CI = c(female_prop + ci_female, male_prop + ci_male)
+)
+# Plot
+ggplot(plot_data, aes(x = Gender, y = Proportion, fill = Gender)) +
+  geom_bar(stat = "identity", color = "black", width = 0.6) +
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2) +
+  labs(
+    y = "Proportion of Mutations on X Chromosome",
+    x = "Gender"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",           # Remove legend
+    panel.grid = element_blank(),       # Remove grid lines
+    axis.line = element_line(color = "black")  # Add x and y axis lines
+  )
+
+```
+
+## All chromosomes
+
+Look at the proportion of mutations on each chromosome, my analysis makes it seem like there are fewer than expected mutations on the X chromosome. Why is this?
+
+```{r}
+
+ggplot(mutation_data, aes(x = CHROMOSOME)) +
+  geom_bar(fill = "steelblue")  +
+  labs(title = "Number of Mutations per Chromosome",
+       x = "Chromosome",
+       y = "Number of Mutations")
+
+# FEMALES
+female_mutation_data <- mutation_data %>% dplyr::filter(GENDER == "f")
+sum(female_mutation_data$CHROMOSOME == "X") / nrow(female_mutation_data)
+# Create the bar chart
+ggplot(female_mutation_data, aes(x = CHROMOSOME)) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Number of Mutations per Chromosome (Females Only)",
+       x = "Chromosome",
+       y = "Number of Mutations")
+
+# MALES
+male_mutation_data <- mutation_data %>% dplyr::filter(GENDER == "m")
+sum(male_mutation_data$CHROMOSOME == "X") / nrow(male_mutation_data)
+# Create the bar chart
+ggplot(male_mutation_data, aes(x = CHROMOSOME)) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Number of Mutations per Chromosome (Males Only)",
+       x = "Chromosome",
+       y = "Number of Mutations")
+
+```
