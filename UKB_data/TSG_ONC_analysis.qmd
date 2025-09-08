@@ -1,0 +1,436 @@
+## Setup
+
+```{r}
+
+#libraries
+library(data.table)
+library(knitr)
+library(dplyr)
+library(ggplot2)
+library(statmod)
+
+#setwd
+opts_knit$set(root.dir = '~/Documents/PhD/Chap1/')
+```
+
+```{r}
+
+
+
+#list of all individual IDs
+all_IDs <- read.table("~/Documents/PhD/Chap1/TSGs_oncogenes/Data/map_file.txt", header = TRUE)
+
+#read in list of tumour suppressors
+tsgs <- read.table("~/Documents/PhD/Chap1/TSGs_oncogenes/Data/TSGs.bed")
+colnames(tsgs) <- c("chr", "start", "end", "gene", "entrez_id")
+
+#read in list of oncogenes
+oncogenes <- read.table("~/Documents/PhD/Chap1/TSGs_oncogenes/Data/oncogenes.bed")
+colnames(oncogenes) <- c("chr", "start", "end", "gene", "entrez_id")
+
+
+#read in cancer data
+cancer <- read.table("~/Documents/PhD/Chap1/TSGs_oncogenes/Data/40009.tab", header=TRUE, fill = TRUE)
+#keep only individuals who have had reported incidences of cancer
+cancer <- na.omit(cancer)
+#list of ids
+cancer <- data.frame(cancer$f.eid)
+#rename column
+colnames(cancer) <- "UKB_id"
+#subset to individuals who we have cnvs called for 
+cancer <- filter(cancer, UKB_id %in% all_IDs$UKB_id)
+#add another column for when merge with other dataframes
+cancer$cancer <- "yes"
+
+
+## DRIVER MUTATIONS
+drivers <- read.csv("~/Documents/PhD/Chap1/TSGs_oncogenes/Data/driver_genes_Bailey2018.csv", sep = ",")
+#subset for just list of genes and if tsg or oncogene
+drivers <- drivers %>% dplyr::select(gene, Tumor.suppressor.or.oncogene.prediction..by.20.20..)
+
+#subset driver genes for tsgs
+driver_tsg <- filter(drivers, Tumor.suppressor.or.oncogene.prediction..by.20.20.. == "tsg"  | Tumor.suppressor.or.oncogene.prediction..by.20.20.. == "possible tsg")
+#remove repeats from this list
+driver_tsg <- driver_tsg[!duplicated(driver_tsg$gene),]
+
+#subset driver genes for oncogenes
+driver_oncogene <- filter(drivers, Tumor.suppressor.or.oncogene.prediction..by.20.20.. == "oncogene"  | Tumor.suppressor.or.oncogene.prediction..by.20.20.. == "possible oncogene")
+#remove repeats from this list
+driver_oncogene <- driver_tsg[!duplicated(driver_oncogene$gene),]
+
+```
+
+### Whole genes
+
+Changes in gene copy number from CNVs encompassing whole genes.
+
+```{r}
+#read in data
+genes <- fread("~/Documents/PhD/Chap1/TSGs_oncogenes/Data/intersect_genes_cnvs.txt")
+colnames(genes) <- c("chr", "geneStart", "geneEnd", "ensembl_id", "strand",
+                     "gene", "cnv_chr", "cnvStart", "cnvEnd", "cn", "sample", "UKB_id")
+# remove all IDs from redacted individuals (negative IDs)
+genes <- genes %>%
+  filter(UKB_id >= 0)
+
+
+# get list of all individuals we have cnvs for and add cancer data
+all_individuals <- data.frame(UKB_id = unique(genes$UKB_id))
+master_df <- left_join(all_individuals, cancer, by = "UKB_id")
+# set all NA cancer data to no
+master_df$cancer[is.na(master_df$cancer)] <- "no"
+
+## TSGs
+#subset genes in cnvs list to tsgs only
+tsgs_in_cnvs <- merge(tsgs, genes, by = "gene")
+## DELETIONS
+# get list of individuals with deletion of TSG
+indvs_with_tsg_del <- tsgs_in_cnvs$UKB_id[tsgs_in_cnvs$cn < 2]
+# now add to master_df
+master_df$tsg_del <- ifelse(master_df$UKB_id %in% indvs_with_tsg_del, "yes", "no")
+## DUPLICATIONS
+# get list of individuals with deletion of TSG
+indvs_with_tsg_dup <- tsgs_in_cnvs$UKB_id[tsgs_in_cnvs$cn > 2]
+# now add to master_df
+master_df$tsg_dup <- ifelse(master_df$UKB_id %in% indvs_with_tsg_dup, "yes", "no")
+
+## DRIVER TSGs
+#subset tsgs in cnvs for driver mutations only
+drivers_in_cnvs <- inner_join(driver_tsg, genes, by = "gene", multiple = 'all')
+## DELETIONS
+# get list of individuals with deletion of TSG
+indvs_with_dtsg_del <- drivers_in_cnvs$UKB_id[drivers_in_cnvs$cn < 2]
+# now add to master_df
+master_df$driver_tsg_del <- ifelse(master_df$UKB_id %in% indvs_with_dtsg_del, "yes", "no")
+## DUPLICATIONS
+# get list of individuals with deletion of TSG
+indvs_with_dtsg_dup <- drivers_in_cnvs$UKB_id[drivers_in_cnvs$cn > 2]
+# now add to master_df
+master_df$driver_tsg_dup <- ifelse(master_df$UKB_id %in% indvs_with_dtsg_dup, "yes", "no")
+
+## ONCOGENES
+#subset genes in cnvs list to oncs only
+oncs_in_cnvs <- merge(oncogenes, genes, by = "gene")
+## DELETIONS
+# get list of individuals with deletion of onc
+indvs_with_onc_del <- oncs_in_cnvs$UKB_id[oncs_in_cnvs$cn < 2]
+# now add to master_df
+master_df$onc_del <- ifelse(master_df$UKB_id %in% indvs_with_onc_del, "yes", "no")
+## DUPLICATIONS
+# get list of individuals with deletion of onc
+indvs_with_onc_dup <- oncs_in_cnvs$UKB_id[oncs_in_cnvs$cn > 2]
+# now add to master_df
+master_df$onc_dup <- ifelse(master_df$UKB_id %in% indvs_with_onc_dup, "yes", "no")
+
+## DRIVER TSGs
+#subset oncs in cnvs for driver mutations only
+driver_oncs_in_cnvs <- inner_join(driver_oncogene, genes, by = "gene", multiple = 'all')
+## DELETIONS
+# get list of individuals with deletion of onc
+indvs_with_donc_del <- driver_oncs_in_cnvs$UKB_id[driver_oncs_in_cnvs$cn < 2]
+# now add to master_df
+master_df$driver_onc_del <- ifelse(master_df$UKB_id %in% indvs_with_donc_del, "yes", "no")
+## DUPLICATIONS
+# get list of individuals with deletion of TSG
+indvs_with_donc_dup <- driver_oncs_in_cnvs$UKB_id[driver_oncs_in_cnvs$cn > 2]
+# now add to master_df
+master_df$driver_onc_dup <- ifelse(master_df$UKB_id %in% indvs_with_donc_dup, "yes", "no")
+
+```
+
+### Disrupted Genes
+
+```{r}
+#read in data
+disrupted_genes <- fread("~/Documents/PhD/Chap1/TSGs_oncogenes/Data/50_intersect_genes_cnvs.txt")
+colnames(disrupted_genes) <- c("chr", "geneStart", "geneEnd", "ensembl_id", "strand",
+                     "gene", "cnv_chr", "cnvStart", "cnvEnd", "cn", "sample", "UKB_id")
+# remove all IDs from redacted individuals (negative IDs)
+disrupted_genes <- disrupted_genes %>%
+  filter(UKB_id >= 0)
+
+### TSGS
+#subset genes in cnvs list to tsgs only
+disrupted_tsgs_in_cnvs <- merge(tsgs, disrupted_genes, by = "gene")
+#merge cancer with list of tsg cnvs
+disrupted_tsgs_in_cnvs <- left_join(disrupted_tsgs_in_cnvs, cancer, by = "UKB_id")
+
+#subset tsgs in cnvs for driver mutations only
+disrupted_drivers_in_cnvs <- inner_join(driver_tsg, disrupted_genes, by = "gene", multiple = 'all')
+#merge cancer with list of tsg cnvs
+disrupted_drivers_in_cnvs <- left_join(disrupted_drivers_in_cnvs, cancer, by = "UKB_id")
+
+
+### ONCOGENES
+#subset genes in cnvs list to oncogenes only
+disrupted_oncogenes_in_cnvs <- merge(oncogenes, disrupted_genes, by = "gene")
+#merge cancer with list of onc cnvs
+disrupted_oncogenes_in_cnvs <- left_join(disrupted_oncogenes_in_cnvs, cancer, by = "UKB_id")
+
+#subset oncs in cnvs for driver mutations only
+disrupted_driver_onc_in_cnvs <- inner_join(driver_oncogene, genes, by = "gene", multiple = 'all')
+#merge cancer with list of onc cnvs
+disrupted_driver_onc_in_cnvs <- left_join(disrupted_driver_onc_in_cnvs, cancer, by = "UKB_id")
+```
+
+## Whole genes
+
+### TSG - Deletions
+
+```{r}
+# Make contingency table
+contingency_table <- table(deletion = factor(master_df$tsg_del, levels = c("yes","no")), 
+                           cancer = master_df$cancer)
+
+# Run Fisher's exact test
+fisher.test(contingency_table, alternative = "greater")
+
+## POWER ANALYSIS
+# counts
+n1 <- sum(contingency_table["yes", ])
+n2 <- sum(contingency_table["no", ])
+# proportions of cancer
+p1 <- contingency_table["yes", "yes"] / n1  # tsg_del = yes
+p2 <- contingency_table["no", "yes"] / n2   # tsg_del = no
+
+power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "greater"  # matches your Fisher's test alternative
+)
+
+#effect size
+p1-p2
+```
+
+### TSGs - Duplications
+
+```{r}
+# Make contingency table
+contingency_table <- table(duplication = factor(master_df$tsg_dup, levels = c("yes","no")), 
+                           cancer = master_df$cancer)
+
+# Run Fisher's exact test
+fisher.test(contingency_table, alternative = "less")
+
+## POWER ANALYSIS
+# Counts per group
+n1 <- sum(contingency_table["yes", ])  # deletion = yes
+n2 <- sum(contingency_table["no", ])   # deletion = no
+
+# Proportion of cancer cases
+p1 <- contingency_table["yes", "yes"] / n1
+p2 <- contingency_table["no", "yes"] / n2
+
+power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "less"  # matches your Fisher's test alternative
+)
+
+#effect size
+p1-p2
+```
+
+### Driver TSG - Deletions
+
+```{r}
+# Make contingency table
+contingency_table <- table(deletion = factor(master_df$driver_tsg_del, levels = c("yes","no")), 
+                           cancer = master_df$cancer)
+
+# Run Fisher's exact test
+fisher.test(contingency_table, alternative = "greater")
+
+## POWER ANALYSIS
+# counts
+n1 <- sum(contingency_table["yes", ])
+n2 <- sum(contingency_table["no", ])
+# proportions of cancer
+p1 <- contingency_table["yes", "yes"] / n1  # tsg_del = yes
+p2 <- contingency_table["no", "yes"] / n2   # tsg_del = no
+
+power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "greater"  # matches your Fisher's test alternative
+)
+
+#effect size
+p1-p2
+```
+
+### Driver TSG - Duplications
+
+```{r}
+# Make contingency table
+contingency_table <- table(duplication = factor(master_df$driver_tsg_dup, levels = c("yes","no")), 
+                           cancer = master_df$cancer)
+
+# Run Fisher's exact test
+fisher.test(contingency_table, alternative = "less")
+
+## POWER ANALYSIS
+# Counts per group
+n1 <- sum(contingency_table["yes", ])  # deletion = yes
+n2 <- sum(contingency_table["no", ])   # deletion = no
+
+# Proportion of cancer cases
+p1 <- contingency_table["yes", "yes"] / n1
+p2 <- contingency_table["no", "yes"] / n2
+
+power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "less"  # matches your Fisher's test alternative
+)
+
+#effect size
+p1-p2
+```
+
+### Oncogenes - Deletions
+
+```{r}
+# Make contingency table
+contingency_table <- table(deletion = factor(master_df$onc_del, levels = c("yes","no")), 
+                           cancer = master_df$cancer)
+
+# Run Fisher's exact test
+fisher.test(contingency_table, alternative = "less")
+
+## POWER ANALYSIS
+# counts
+n1 <- sum(contingency_table["yes", ])
+n2 <- sum(contingency_table["no", ])
+# proportions of cancer
+p1 <- contingency_table["yes", "yes"] / n1  # tsg_del = yes
+p2 <- contingency_table["no", "yes"] / n2   # tsg_del = no
+
+power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "less"  # matches your Fisher's test alternative
+)
+
+#effect size
+p1-p2
+```
+
+### Oncogenes - Duplications
+
+```{r}
+# Make contingency table
+contingency_table <- table(duplication = factor(master_df$onc_dup, levels = c("yes","no")), 
+                           cancer = master_df$cancer)
+
+# Run Fisher's exact test
+fisher.test(contingency_table, alternative = "greater")
+
+## POWER ANALYSIS
+# Counts per group
+n1 <- sum(contingency_table["yes", ])  # deletion = yes
+n2 <- sum(contingency_table["no", ])   # deletion = no
+
+# Proportion of cancer cases
+p1 <- contingency_table["yes", "yes"] / n1
+p2 <- contingency_table["no", "yes"] / n2
+
+power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "greater"  # matches your Fisher's test alternative
+)
+
+#effect size
+p1-p2
+```
+
+### Driver Oncogenes - Deletions
+
+```{r}
+# Make contingency table
+contingency_table <- table(deletion = factor(master_df$driver_onc_del, levels = c("yes","no")), 
+                           cancer = master_df$cancer)
+
+# Run Fisher's exact test
+fisher.test(contingency_table, alternative = "less")
+
+## POWER ANALYSIS
+# counts
+n1 <- sum(contingency_table["yes", ])
+n2 <- sum(contingency_table["no", ])
+# proportions of cancer
+p1 <- contingency_table["yes", "yes"] / n1  # tsg_del = yes
+p2 <- contingency_table["no", "yes"] / n2   # tsg_del = no
+
+power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "less"  # matches your Fisher's test alternative
+)
+
+#effect size
+p1-p2
+```
+
+### Driver Oncogenes - Duplications
+
+```{r}
+# Make contingency table
+contingency_table <- table(duplication = factor(master_df$driver_onc_dup, levels = c("yes","no")), 
+                           cancer = master_df$cancer)
+
+# Run Fisher's exact test
+fisher.test(contingency_table, alternative = "greater")
+
+## POWER ANALYSIS
+# Counts per group
+n1 <- sum(contingency_table["yes", ])  # deletion = yes
+n2 <- sum(contingency_table["no", ])   # deletion = no
+
+# Proportion of cancer cases
+p1 <- contingency_table["yes", "yes"] / n1
+p2 <- contingency_table["no", "yes"] / n2
+
+power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "greater"  # matches your Fisher's test alternative
+)
+
+#effect size
+p1-p2
+```
