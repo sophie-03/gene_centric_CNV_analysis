@@ -2,7 +2,7 @@
 #SBATCH --export=ALL # export all environment variables to the batch job
 #SBATCH --mail-type=END # send email at job completion
 #SBATCH --mail-user=s.matthews5@universityofgalway.ie # email address
-#SBATCH --job-name=download #job name
+#SBATCH --job-name=cnvWAS #job name
 #SBATCH -D /data4/smatthews/pheWAS/cnv_GWAS # set working directory to
 
 conda activate cnvGWAS
