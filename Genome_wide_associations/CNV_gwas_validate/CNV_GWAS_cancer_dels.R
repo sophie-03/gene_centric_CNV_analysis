@@ -58,6 +58,7 @@ results_df <- data.frame(
 
 # Loop through each region
 for(region_no in all_regions) {
+  trycatch({
   
   # Subset data for current region
   region <- subset(cnvs_with_regions, region_id == region_no)
@@ -90,7 +91,11 @@ for(region_no in all_regions) {
       n_total = nrow(data),
       stringsAsFactors = FALSE
     ))
-  
+  }, error = function(e) {
+    # This block runs only if there's an error
+    warning(paste("Error in region", region_no, ":", e$message))
+    # The loop will continue to the next region
+  })
 }
 
 write.table(results_df, "/data4/smatthews/pheWAS/cnv_GWAS/cancer_del_logistic_results.txt", col.names = TRUE, row.names = FALSE, quotes = FALSE)
