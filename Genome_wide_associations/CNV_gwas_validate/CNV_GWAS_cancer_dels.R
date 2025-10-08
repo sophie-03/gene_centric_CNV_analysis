@@ -58,7 +58,7 @@ results_df <- data.frame(
 
 # Loop through each region
 for(region_no in all_regions) {
-  trycatch({
+  tryCatch({
   
   # Subset data for current region
   region <- subset(cnvs_with_regions, region_id == region_no)
