@@ -5,6 +5,7 @@
 #SBATCH --job-name=cnvWAS #job name
 #SBATCH -D /data4/smatthews/pheWAS/cnv_GWAS # set working directory to
 
+module load Anaconda3/2024.02-1
 conda activate cnvGWAS
 
 Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNV_GWAS_cancer_dels.R
