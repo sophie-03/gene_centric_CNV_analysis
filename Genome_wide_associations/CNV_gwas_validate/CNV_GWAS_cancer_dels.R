@@ -44,6 +44,20 @@ covar$pheno <- ifelse(covar$IID %in% pheno$V1, 1, 0)
 # Get all unique region_ids
 all_regions <- unique(cnvs_with_regions$region_id)
 
+# Filter regions by size and frequency
+region_summary <- cnvs_with_regions[, .(min_size = min(end - start),
+                                       max_size = max(end - start),
+                                       n_carriers = uniqueN(sample_id)),
+                                   by = region_id]
+
+# Keep only reasonable regions
+good_regions <- region_summary[min_size >= 1000 & 
+                              max_size <= 500000 & 
+                              n_carriers >= 10 & 
+                              n_carriers <= 5000, region_id]
+
+all_regions <- good_regions  # Use filtered regions
+
 # Initialize results dataframe
 results_df <- data.frame(
   region_id = character(),
@@ -98,4 +112,4 @@ for(region_no in all_regions) {
   })
 }
 
-write.table(results_df, "/data4/smatthews/pheWAS/cnv_GWAS/cancer_del_logistic_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+write.table(results_df, "/data4/smatthews/pheWAS/cnv_GWAS/cancer_del_logistic_results_filtered.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
