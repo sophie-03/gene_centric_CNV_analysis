@@ -112,4 +112,4 @@ for(region_no in all_regions) {
   })
 }
 
-write.table(results_df, "/data4/smatthews/pheWAS/cnv_GWAS/diabetes_del_logistic_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+write.table(results_df, "/data4/smatthews/pheWAS/cnv_GWAS/diabetes_del_logistic_results_filtered.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
