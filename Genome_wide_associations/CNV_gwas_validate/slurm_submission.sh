@@ -8,4 +8,4 @@
 module load Anaconda3/2024.02-1
 conda activate cnvGWAS
 
-Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNV_GWAS_dels.R cancer
+Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNV_GWAS_dels.R angina
