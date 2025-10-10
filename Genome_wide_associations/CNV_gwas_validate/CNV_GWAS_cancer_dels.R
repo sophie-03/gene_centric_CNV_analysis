@@ -105,6 +105,8 @@ for(region_no in all_regions) {
       n_total = nrow(data),
       stringsAsFactors = FALSE
     ))
+
+    print(region_no)
   }, error = function(e) {
     # This block runs only if there's an error
     warning(paste("Error in region", region_no, ":", e$message))
