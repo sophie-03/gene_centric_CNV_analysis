@@ -1,5 +1,3 @@
-library(CNVRanger)
-library(GenomicRanges)
 library(data.table)
 library(dplyr)
 
@@ -11,7 +9,7 @@ pheno_name <- args[1]
 part_num <- as.integer(args[2])
 
 #read in cnv calls
-cnv_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_splits/cnv_regions_part", part_num, ".txt")
+cnv_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_split/cnv_regions_part", part_num, ".txt")
 cnvs_with_regions <- fread(cnv_file)
 
 # get data for GWAS
@@ -85,15 +83,6 @@ for(region_no in all_regions) {
 ## WRITE OUTPUT
 # ---- Safe append to master output ----
 output_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/", pheno_name, "_del_logistic_results.txt")
-lock_file <- paste0(output_file, ".lock")
-
-# Write results to a temporary file first
-tmp_file <- tempfile(pattern = paste0("part", part_num, "_"), fileext = ".txt")
-fwrite(results_df, tmp_file, sep = "\t", col.names = (part_num == 1))  # header only for first
-
-# Append safely using a lock
-lock <- lock(file = lock_file, exclusive = TRUE, timeout = 6000)
-cat("Appending results from part", part_num, "to master file...\n")
 
 if (!file.exists(output_file)) {
   # if master file doesn’t exist, include header
@@ -103,4 +92,3 @@ if (!file.exists(output_file)) {
   fwrite(results_df, output_file, sep = "\t", col.names = FALSE, append = TRUE)
 }
 
-unlock(lock)
