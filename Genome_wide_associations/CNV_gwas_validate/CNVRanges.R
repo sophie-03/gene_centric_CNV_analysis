@@ -35,3 +35,29 @@ cnvs_with_regions <- cnvs_dt[cnvrs_dt,
                                state, sample_id, UKB_id, region_id, freq, type)]
 
 write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+
+
+
+## SPLIT CNV REGIONS INTO DIFFERENT FILES FOR PROCESSING
+# Extract numeric region index from region_id
+cnvs_with_regions[, region_num := as.integer(gsub("region_", "", region_id))]
+
+# Define bins of 10 regions each
+cnvs_with_regions[, region_group := ceiling(region_num / 20)]
+
+# Get total number of groups (should be around 71 for ~710 regions)
+n_groups <- max(cnvs_with_regions$region_group)
+
+# Split into list of data.tables
+cnv_subsets <- split(cnvs_with_regions, by = "region_group", keep.by = FALSE)
+
+# Optionally, assign each subset to a variable in the environment (cnvrs1, cnvrs2, ...)
+for (i in seq_along(cnv_subsets)) {
+  assign(paste0("cnvrs", i), cnv_subsets[[i]])
+}
+
+# Write each subset to a separate file
+for (i in seq_along(cnv_subsets)) {
+   out_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_split/cnv_regions_part", i, ".txt")
+   fwrite(cnv_subsets[[i]], out_file, sep = "\t")
+ }
