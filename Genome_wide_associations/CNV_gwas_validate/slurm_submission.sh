@@ -2,16 +2,16 @@
 #SBATCH --export=ALL
 #SBATCH --mail-type=END
 #SBATCH --mail-user=s.matthews5@universityofgalway.ie
-#SBATCH --job-name=angina_dels
+#SBATCH --job-name=asthma_dels
 #SBATCH -D /data4/smatthews/pheWAS/cnv_GWAS
 #SBATCH --array=1-40         # one per CNV part file
-#SBATCH -o logs/angina_dels_%A_%a.out
+#SBATCH -o logs/asthma_dels_%A_%a.out
 #SBATCH --nice=100
 
 module load Anaconda3/2024.02-1
 conda activate cnvGWAS
 
-PHENO="angina"
+PHENO="asthma"
 PART=${SLURM_ARRAY_TASK_ID}
 
 Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNV_GWAS_dels.R $PHENO $PART
