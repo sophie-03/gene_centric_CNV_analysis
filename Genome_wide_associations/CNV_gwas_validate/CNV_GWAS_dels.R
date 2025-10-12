@@ -86,9 +86,9 @@ output_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/", pheno_name, "_del_log
 
 if (!file.exists(output_file)) {
   # if master file doesn’t exist, include header
-  fwrite(results_df, output_file, sep = "\t", col.names = TRUE, append = FALSE)
+  write.table(results_df, output_file, sep = "\t", col.names = TRUE, row.names = FALSE, quote = FALSE, append = FALSE)
 } else {
   # append without header
-  fwrite(results_df, output_file, sep = "\t", col.names = FALSE, append = TRUE)
+  write.table(results_df, output_file, sep = "\t", col.names = FALSE, row.names = FALSE, quote = FALSE, append = TRUE)
 }
 
