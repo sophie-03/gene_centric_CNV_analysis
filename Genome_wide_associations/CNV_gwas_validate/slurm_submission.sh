@@ -7,6 +7,8 @@
 #SBATCH --array=1-40         # one per CNV part file
 #SBATCH -o logs/stroke_dels_%A_%a.out
 #SBATCH --nice=100
+#SBATCH --partition=normal,highmem
+#SBATCH --exclude=cn070,cn071,cn072,cn073,cn074,cn075,cn076,cn100
 
 module load Anaconda3/2024.02-1
 conda activate cnvGWAS
