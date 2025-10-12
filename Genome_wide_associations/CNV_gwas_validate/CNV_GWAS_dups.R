@@ -1,5 +1,3 @@
-library(CNVRanger)
-library(GenomicRanges)
 library(data.table)
 library(dplyr)
 
@@ -8,37 +6,11 @@ args <- commandArgs(trailingOnly = TRUE)
 
 # Phenotype name
 pheno_name <- args[1]
+part_num <- as.integer(args[2])
 
 #read in cnv calls
-cnvs <- read.table("/data4/smatthews/pheWAS/cnv_GWAS/cnv_calls.bed")
-colnames(cnvs) <- c("chr","start","end","state","sample_id","UKB_id")
-
-#group the calls by sample ID and convert them to a GRangesList
-grl <- GenomicRanges::makeGRangesListFromDataFrame(cnvs, 
-                                            split.field="sample_id", keep.extra.columns=TRUE)
-#sort
-grl <- GenomicRanges::sort(grl)
-
-#summarize cnv calls to cnv regions
-cnvrs <- populationRanges(grl, density=0.1)
-
-#convert regions to df
-cnvrs_df <- as.data.frame(cnvrs)
-cnvrs_df$region_id <- paste0("region_",1:nrow(cnvrs_df))
-
-# Convert both to data.tables
-cnvs_dt <- as.data.table(cnvs)
-cnvrs_dt <- as.data.table(cnvrs_df)
-
-
-# combine cnv calls with cnv regions
-cnvs_with_regions <- cnvs_dt[cnvrs_dt, 
-                             on = .(chr == seqnames, 
-                                    start >= start, 
-                                    end <= end),
-                             nomatch = NULL,  # Remove non-matches
-                             .(chr = seqnames, start = i.start, end = i.end, 
-                               state, sample_id, UKB_id, region_id, freq, type)]
+cnv_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_split/cnv_regions_part", part_num, ".txt")
+cnvs_with_regions <- fread(cnv_file)
 
 # get data for GWAS
 pheno_file <- paste0("/data4/smatthews/pheWAS/pheno_", pheno_name, "/", pheno_name, "_cases.txt")
@@ -94,7 +66,7 @@ for(region_no in all_regions) {
       se = stats["Std. Error"],
       z_value = stats["z value"],
       p_value = stats["Pr(>|z|)"],
-      n_carriers = sum(data$state < 2),  # Number of deletion carriers
+      n_carriers = sum(data$state > 2),  # Number of duplication carriers
       n_total = nrow(data),
       stringsAsFactors = FALSE
     ))
@@ -107,5 +79,15 @@ for(region_no in all_regions) {
   })
 }
 
+
+## WRITE OUTPUT
+# ---- Safe append to master output ----
 output_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/", pheno_name, "_dup_logistic_results.txt")
-write.table(results_df, output_file, col.names = TRUE, row.names = FALSE, quote = FALSE)
+
+if (!file.exists(output_file)) {
+  # if master file doesn’t exist, include header
+  write.table(results_df, output_file, sep = "\t", col.names = TRUE, row.names = FALSE, quote = FALSE, append = FALSE)
+} else {
+  # append without header
+  write.table(results_df, output_file, sep = "\t", col.names = FALSE, row.names = FALSE, quote = FALSE, append = TRUE)
+}
