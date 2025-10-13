@@ -2,18 +2,18 @@
 #SBATCH --export=ALL
 #SBATCH --mail-type=END
 #SBATCH --mail-user=s.matthews5@universityofgalway.ie
-#SBATCH --job-name=stroke_dups
+#SBATCH --job-name=dvt_dels
 #SBATCH -D /data4/smatthews/pheWAS/cnv_GWAS
 #SBATCH --array=1-40         # one per CNV part file
-#SBATCH -o logs/stroke_dups_%A_%a.out
+#SBATCH -o logs/dvt_dels_%A_%a.out
 #SBATCH --nice=100
-#SBATCH --partition=normal,highmem
+#SBATCH --partition=highmem
 #SBATCH --exclude=cn070,cn071,cn072,cn073,cn074,cn075,cn076,cn100
 
 module load Anaconda3/2024.02-1
 conda activate cnvGWAS
 
-PHENO="stroke"
+PHENO="dvt"
 PART=${SLURM_ARRAY_TASK_ID}
 
-Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNV_GWAS_dups.R $PHENO $PART
+Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNV_GWAS_dels.R $PHENO $PART
