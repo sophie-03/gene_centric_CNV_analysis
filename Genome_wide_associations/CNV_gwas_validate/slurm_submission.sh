@@ -9,7 +9,7 @@
 #SBATCH --nice=100
 #SBATCH --partition=highmem
 #SBATCH --exclude=cn070,cn071,cn072,cn073,cn074,cn075,cn076,cn100
-#SBATCH --cpus-per-core=16
+#SBATCH --cpus-per-task=16
 
 module load Anaconda3/2024.02-1
 conda activate cnvGWAS
