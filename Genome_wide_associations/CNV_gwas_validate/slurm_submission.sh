@@ -7,7 +7,7 @@
 #SBATCH --array=1-40         # one per CNV part file
 #SBATCH -o logs/pulm_emb_dels_%A_%a.out
 #SBATCH --nice=100
-#SBATCH --partition=highmem,normal
+#SBATCH --partition=normal
 #SBATCH --exclude=cn070,cn071,cn072,cn073,cn074,cn075,cn076,cn100
 #SBATCH --cpus-per-task=16
 
