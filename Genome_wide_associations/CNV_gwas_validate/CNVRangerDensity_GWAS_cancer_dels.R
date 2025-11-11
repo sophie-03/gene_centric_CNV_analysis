@@ -7,8 +7,11 @@ library(dplyr)
 cnvs <- read.table("/data4/smatthews/pheWAS/cnv_GWAS/cnv_calls.bed")
 colnames(cnvs) <- c("chr","start","end","state","sample_id","UKB_id")
 
+# Filter for deletions only before making regions
+cnvs_del <- cnvs[cnvs$state < 2, ]
+
 #group the calls by sample ID and convert them to a GRangesList
-grl <- GenomicRanges::makeGRangesListFromDataFrame(cnvs, 
+grl <- GenomicRanges::makeGRangesListFromDataFrame(cnvs_del, 
                                             split.field="sample_id", keep.extra.columns=TRUE)
 #sort
 grl <- GenomicRanges::sort(grl)
@@ -21,7 +24,7 @@ cnvrs_df <- as.data.frame(cnvrs)
 cnvrs_df$region_id <- paste0("region_",1:nrow(cnvrs_df))
 
 # Convert both to data.tables
-cnvs_dt <- as.data.table(cnvs)
+cnvs_dt <- as.data.table(cnvs_del)
 cnvrs_dt <- as.data.table(cnvrs_df)
 
 
@@ -114,4 +117,4 @@ for(region_no in all_regions) {
   })
 }
 
-write.table(results_df, "/data4/smatthews/pheWAS/cnv_GWAS/cancer_del_logistic_results_test.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+write.table(results_df, "/data4/smatthews/pheWAS/cnv_GWAS/CNVRangerDensity_cancer_del_logistic_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
