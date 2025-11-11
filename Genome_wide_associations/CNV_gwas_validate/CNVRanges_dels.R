@@ -37,7 +37,7 @@ cnvs_with_regions <- cnvs_dt[cnvrs_dt,
                              .(chr = seqnames, start = i.start, end = i.end, 
                                state, sample_id, UKB_id, region_id, freq, type)]
 
-write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_dels.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
 
 
 
