@@ -2,10 +2,10 @@
 #SBATCH --export=ALL
 #SBATCH --mail-type=END
 #SBATCH --mail-user=s.matthews5@universityofgalway.ie
-#SBATCH --job-name=cnvrangerD
+#SBATCH --job-name=cnvrangerRO
 #SBATCH -D /data4/smatthews/pheWAS/cnv_GWAS
 #SBATCH --array=1-40         # one per CNV part file
-#SBATCH -o logs/cnvrangerD_cancer_dels_%A_%a.out
+#SBATCH -o logs/cnvrangerRO_cancer_dels_%A_%a.out
 #SBATCH --nice=100
 #SBATCH --partition=normal
 #SBATCH --exclude=cn070,cn071,cn072,cn073,cn074,cn075,cn076,cn100
@@ -17,4 +17,4 @@ conda activate cnvGWAS
 PHENO="cancer"
 PART=${SLURM_ARRAY_TASK_ID}
 
-Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNVRangerDensity0.1_GWAS_dels.R $PHENO $PART
+Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNVRangerRO0.5_GWAS_dels.R $PHENO $PART
