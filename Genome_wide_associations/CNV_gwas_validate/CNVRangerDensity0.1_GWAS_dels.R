@@ -9,7 +9,7 @@ pheno_name <- args[1]
 part_num <- as.integer(args[2])
 
 #read in cnv calls
-cnv_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_split/cnv_regions_part", part_num, ".txt")
+cnv_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_del_split/cnv_regions_part", part_num, ".txt")
 cnvs_with_regions <- fread(cnv_file)
 
 # get data for GWAS
@@ -82,7 +82,7 @@ for(region_no in all_regions) {
 
 ## WRITE OUTPUT
 # ---- Safe append to master output ----
-output_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/", pheno_name, "_del_logistic_results.txt")
+output_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/", pheno_name, "_del_CNVRangerDensity0.1_logistic_results.txt")
 
 if (!file.exists(output_file)) {
   # if master file doesn’t exist, include header
