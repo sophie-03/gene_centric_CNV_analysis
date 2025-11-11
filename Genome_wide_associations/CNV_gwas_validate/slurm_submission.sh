@@ -17,4 +17,4 @@ conda activate cnvGWAS
 PHENO="cancer"
 PART=${SLURM_ARRAY_TASK_ID}
 
-Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNV_GWAS_dups.R $PHENO $PART
+Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/Genome_wide_associations/CNV_gwas_validate/CNVRangerDensity0.1_GWAS_dels.R $PHENO $PART
