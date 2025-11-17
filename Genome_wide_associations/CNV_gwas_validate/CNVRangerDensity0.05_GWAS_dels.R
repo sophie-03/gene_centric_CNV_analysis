@@ -9,7 +9,7 @@ pheno_name <- args[1]
 part_num <- as.integer(args[2])
 
 #read in cnv calls
-cnv_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_del_split/cnv_regions_del_part", part_num, ".txt")
+cnv_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_del_density0.05_split/cnv_regions_del_density0.05_part", part_num, ".txt")
 cnvs_with_regions <- fread(cnv_file)
 
 # get data for GWAS
