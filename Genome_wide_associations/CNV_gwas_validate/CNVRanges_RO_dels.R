@@ -17,7 +17,7 @@ grl <- GenomicRanges::makeGRangesListFromDataFrame(cnvs,
 grl <- GenomicRanges::sort(grl)
 
 #summarize cnv calls to cnv regions
-cnvrs <- populationRanges(grl, mode = "RO", ro.thresh=0.5)
+cnvrs <- populationRanges(grl, mode = "RO", ro.thresh=0.1)
 
 #convert regions to df
 cnvrs_df <- as.data.frame(cnvrs)
@@ -37,7 +37,7 @@ cnvs_with_regions <- cnvs_dt[cnvrs_dt,
                              .(chr = seqnames, start = i.start, end = i.end, 
                                state, sample_id, UKB_id, region_id, freq, type)]
 
-write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_dels_RO_0.5.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_dels_RO_0.1.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
 
 
 
