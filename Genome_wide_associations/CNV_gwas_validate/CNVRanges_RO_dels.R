@@ -17,7 +17,7 @@ grl <- GenomicRanges::makeGRangesListFromDataFrame(cnvs,
 grl <- GenomicRanges::sort(grl)
 
 #summarize cnv calls to cnv regions
-cnvrs <- populationRanges(grl, mode = "RO", ro.thresh=0.3)
+cnvrs <- populationRanges(grl, mode = "RO", ro.thresh=0.7)
 
 #convert regions to df
 cnvrs_df <- as.data.frame(cnvrs)
@@ -37,7 +37,7 @@ cnvs_with_regions <- cnvs_dt[cnvrs_dt,
                              .(chr = seqnames, start = i.start, end = i.end, 
                                state, sample_id, UKB_id, region_id, freq, type)]
 
-write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_dels_RO_0.3.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_dels_RO_0.7.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
 
 
 
@@ -61,6 +61,6 @@ for (i in seq_along(cnv_subsets)) {
 
 # Write each subset to a separate file
 for (i in seq_along(cnv_subsets)) {
-   out_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_RO_0.3_del_split/cnv_regions_RO_0.3_del_part", i, ".txt")
+   out_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_RO_0.7_del_split/cnv_regions_RO_0.7_del_part", i, ".txt")
    fwrite(cnv_subsets[[i]], out_file, sep = "\t")
  }
