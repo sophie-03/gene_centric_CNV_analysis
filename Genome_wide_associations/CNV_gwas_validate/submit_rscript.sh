@@ -2,9 +2,9 @@
 #SBATCH --export=ALL
 #SBATCH --mail-type=END
 #SBATCH --mail-user=s.matthews5@universityofgalway.ie
-#SBATCH --job-name=RO_0.5_regions
+#SBATCH --job-name=RO_0.3_regions
 #SBATCH -D /data4/smatthews/pheWAS/cnv_GWAS
-#SBATCH -o logs/cnvrangesRO_0.5.out
+#SBATCH -o logs/cnvrangesRO_0.3.out
 #SBATCH --cpus-per-task=16
 
 module load Anaconda3/2024.02-1
