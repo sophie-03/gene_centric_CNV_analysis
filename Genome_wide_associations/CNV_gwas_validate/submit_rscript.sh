@@ -2,7 +2,7 @@
 #SBATCH --export=ALL
 #SBATCH --mail-type=END
 #SBATCH --mail-user=s.matthews5@universityofgalway.ie
-#SBATCH --job-name=cnvranges
+#SBATCH --job-name=RO_0.3_regions
 #SBATCH -D /data4/smatthews/pheWAS/cnv_GWAS
 #SBATCH -o logs/cnvrangesRO.out
 #SBATCH --cpus-per-task=16
