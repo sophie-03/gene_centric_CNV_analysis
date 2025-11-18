@@ -37,30 +37,31 @@ cnvs_with_regions <- cnvs_dt[cnvrs_dt,
                              .(chr = seqnames, start = i.start, end = i.end, 
                                state, sample_id, UKB_id, region_id, freq, type)]
 
-write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_dels_density0.05.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_dels_density0.1.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
 
 
 
 ## SPLIT CNV REGIONS INTO DIFFERENT FILES FOR PROCESSING
-# Extract numeric region index from region_id
-cnvs_with_regions[, region_num := as.integer(gsub("region_", "", region_id))]
+# Get unique region IDs
+unique_regions <- unique(cnvs_with_regions$region_id)
 
-# Define bins of 10 regions each
-cnvs_with_regions[, region_group := ceiling(region_num / 20)]
+# Split into 50 roughly equal chunks
+n_chunks <- 50
+region_chunks <- split(unique_regions, cut(seq_along(unique_regions), n_chunks, labels = FALSE))
 
-# Get total number of groups (should be around 71 for ~710 regions)
-n_groups <- max(cnvs_with_regions$region_group)
+#  Subset the original dataframe for each chunk
+df_list <- lapply(region_chunks, function(regs) {
+  subset(cnvs_with_regions, region_id %in% regs)
+})
 
-# Split into list of data.tables
-cnv_subsets <- split(cnvs_with_regions, by = "region_group", keep.by = FALSE)
+# Make sure the output directory exists
+out_dir <- "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_del_density0.1_split"
+if(!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-# Optionally, assign each subset to a variable in the environment (cnvrs1, cnvrs2, ...)
-for (i in seq_along(cnv_subsets)) {
-  assign(paste0("cnvrs", i), cnv_subsets[[i]])
+# Loop through the list and write each dataframe
+for(i in seq_along(df_list)) {
+  out_file <- file.path(out_dir, paste0("cnv_regions_del_density0.1_part", i, ".txt"))
+  fwrite(df_list[[i]], out_file, sep = "\t")
 }
 
-# Write each subset to a separate file
-for (i in seq_along(cnv_subsets)) {
-   out_file <- paste0("/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_del_density0.05_split/cnv_regions_del_density0.05_part", i, ".txt")
-   fwrite(cnv_subsets[[i]], out_file, sep = "\t")
- }
+
