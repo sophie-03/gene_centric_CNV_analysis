@@ -37,7 +37,7 @@ cnvs_with_regions <- cnvs_dt[cnvrs_dt,
                              .(chr = seqnames, start = i.start, end = i.end, 
                                state, sample_id, UKB_id, region_id, freq, type)]
 
-write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_dels_density0.1.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+write.table(cnvs_with_regions, "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_dels_density0.05.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
 
 
 
@@ -55,12 +55,12 @@ df_list <- lapply(region_chunks, function(regs) {
 })
 
 # Make sure the output directory exists
-out_dir <- "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_del_density0.1_split"
+out_dir <- "/data4/smatthews/pheWAS/cnv_GWAS/cnv_regions_del_density0.05_split"
 if(!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
 # Loop through the list and write each dataframe
 for(i in seq_along(df_list)) {
-  out_file <- file.path(out_dir, paste0("cnv_regions_del_density0.1_part", i, ".txt"))
+  out_file <- file.path(out_dir, paste0("cnv_regions_del_density0.05_part", i, ".txt"))
   fwrite(df_list[[i]], out_file, sep = "\t")
 }
 
