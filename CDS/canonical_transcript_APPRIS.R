@@ -101,3 +101,5 @@ bed <- all_canonical %>%
 
 #write bed file
 write.table(bed, "/data4/smatthews/pheWAS/CDS/canonical_transcripts.bed", sep = "\t", col.names=FALSE, row.names=FALSE, quote=FALSE)
+
+## GET CDS FOR THESE TRANSCRIPTS
