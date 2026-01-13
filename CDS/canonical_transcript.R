@@ -85,3 +85,19 @@ cat("These numbers MUST be equal!\n")
 #write file
 write.table(all_canonical,"/data4/smatthews/pheWAS/CDS/primary_transcripts_APPRIS.txt", col.names=TRUE, row.names=FALSE, quote=FALSE)
 
+#make bed file
+bed <- all_canonical %>%
+  mutate(
+    start_bed = start - 1,  # Convert to 0-based for BED
+    ID = transcript_id       # Use transcript_id as ID
+  ) %>%
+  select(
+    seqid,           # Chromosome
+    start = start_bed, # 0-based start
+    end,             # 1-based end (same as GFF end)
+    gene_name,       # Gene name
+    ID               # Transcript ID
+  )
+
+#write bed file
+write.table(bed, "/data4/smatthews/pheWAS/CDS/canonical_transcripts.bed", sep = "\t", col.names=FALSE, row.names=FALSE, quote=FALSE)
