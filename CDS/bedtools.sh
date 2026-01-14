@@ -11,4 +11,4 @@ conda activate cnvGWAS
 cd /data4/smatthews/pheWAS/CDS/
 
 # get genes where the longest cds is overlapped by a deletion
-bedtools intersect -wa -wb -a longest_cds.bed -b cnv_calls.bed -filenames > intersect_cds_cnvs.txt
+bedtools intersect -wa -wb -a canonical_transcripts_CDS.bed -b cnv_calls.bed -filenames > intersect_cds_cnvs.txt
