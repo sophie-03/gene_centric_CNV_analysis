@@ -106,7 +106,7 @@ master_df$driver_onc_del <- ifelse(master_df$UKB_id %in% indvs_with_donc_del, "y
 ########### TSG DELETIONS ############
 # Make contingency table
 contingency_table <- table(deletion = factor(master_df$tsg_del, levels = c("yes","no")), 
-                           cancer = master_df$cancer)
+                           cancer = factor(master_df$cancer, levels = c("yes","no")))
 # Run Fisher's exact test
 fisher.test(contingency_table, alternative = "greater")
 ## POWER ANALYSIS
@@ -132,8 +132,7 @@ p1-p2
 ########### TSG DRIVER DELETIONS ############
 # Make contingency table
 contingency_table <- table(deletion = factor(master_df$driver_tsg_del, levels = c("yes","no")), 
-                           cancer = master_df$cancer)
-
+                           cancer = factor(master_df$cancer, levels = c("yes","no")))
 # Run Fisher's exact test
 fisher.test(contingency_table, alternative = "greater")
 
