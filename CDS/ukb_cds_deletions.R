@@ -2,6 +2,7 @@
 library(data.table)
 library(dplyr)
 library(tidyr)
+library(statmod)
 
 setwd("/data4/smatthews/pheWAS/CDS/")
 
@@ -102,13 +103,31 @@ indvs_with_donc_del <- driver_oncs_in_cnvs$UKB_id[driver_oncs_in_cnvs$cn < 2]
 # now add to master_df
 master_df$driver_onc_del <- ifelse(master_df$UKB_id %in% indvs_with_donc_del, "yes", "no")
 
+# make df to store results
+results <- data.frame(
+  test = character(0), 
+  cancer_cnv = numeric(0),    # cancer yes & deletion yes
+  cancer_nocnv = numeric(0),  # cancer yes & deletion no  
+  nocancer_cnv = numeric(0),  # cancer no & deletion yes
+  nocancer_nocnv = numeric(0), # cancer no & deletion no
+  p_value = numeric(0),
+  odds_ratio = numeric(0),
+  power = numeric(0),
+  stringsAsFactors = FALSE
+)
+
 
 ########### TSG DELETIONS ############
 # Make contingency table
 contingency_table <- table(deletion = factor(master_df$tsg_del, levels = c("yes","no")), 
                            cancer = factor(master_df$cancer, levels = c("yes","no")))
+# Extract counts from the table
+cancer_cnv <- contingency_table["yes", "yes"]    # deletions YES & cancer YES
+cancer_nocnv <- contingency_table["no", "yes"]   # deletions NO & cancer YES  
+nocancer_cnv <- contingency_table["yes", "no"]   # deletions YES & cancer NO
+nocancer_nocnv <- contingency_table["no", "no"]  # deletions NO & cancer NO
 # Run Fisher's exact test
-fisher.test(contingency_table, alternative = "greater")
+fisher_result <- fisher.test(contingency_table, alternative = "greater")
 ## POWER ANALYSIS
 # counts
 n1 <- sum(contingency_table["yes", ])
@@ -116,7 +135,7 @@ n2 <- sum(contingency_table["no", ])
 # proportions of cancer
 p1 <- contingency_table["yes", "yes"] / n1  # tsg_del = yes
 p2 <- contingency_table["no", "yes"] / n2   # tsg_del = no
-power.fisher.test(
+power <- power.fisher.test(
   p1 = p1,
   p2 = p2,
   n1 = n1,
@@ -127,14 +146,35 @@ power.fisher.test(
 )
 #effect size
 p1-p2
+
+# Create new row with results
+new_row <- data.frame(
+  test = "TSG_deletion",
+  cancer_cnv = cancer_cnv,
+  cancer_nocnv = cancer_nocnv,
+  nocancer_cnv = nocancer_cnv,
+  nocancer_nocnv = nocancer_nocnv,
+  p_value = fisher_result$p.value,
+  odds_ratio = unname(fisher_result$estimate),
+  power = power,
+  stringsAsFactors = FALSE
+)
+# Add to dataframe
+results <- rbind(results, new_row)
+
 
 
 ########### TSG DRIVER DELETIONS ############
 # Make contingency table
 contingency_table <- table(deletion = factor(master_df$driver_tsg_del, levels = c("yes","no")), 
                            cancer = factor(master_df$cancer, levels = c("yes","no")))
+# Extract counts from the table
+cancer_cnv <- contingency_table["yes", "yes"]    # deletions YES & cancer YES
+cancer_nocnv <- contingency_table["no", "yes"]   # deletions NO & cancer YES  
+nocancer_cnv <- contingency_table["yes", "no"]   # deletions YES & cancer NO
+nocancer_nocnv <- contingency_table["no", "no"]  # deletions NO & cancer NO
 # Run Fisher's exact test
-fisher.test(contingency_table, alternative = "greater")
+fisher_result <- fisher.test(contingency_table, alternative = "greater")
 
 ## POWER ANALYSIS
 # counts
@@ -144,7 +184,7 @@ n2 <- sum(contingency_table["no", ])
 p1 <- contingency_table["yes", "yes"] / n1  # tsg_del = yes
 p2 <- contingency_table["no", "yes"] / n2   # tsg_del = no
 
-power.fisher.test(
+power <- power.fisher.test(
   p1 = p1,
   p2 = p2,
   n1 = n1,
@@ -156,3 +196,123 @@ power.fisher.test(
 
 #effect size
 p1-p2
+
+# Create new row with results
+new_row <- data.frame(
+  test = "driverTSG_deletion",
+  cancer_cnv = cancer_cnv,
+  cancer_nocnv = cancer_nocnv,
+  nocancer_cnv = nocancer_cnv,
+  nocancer_nocnv = nocancer_nocnv,
+  p_value = fisher_result$p.value,
+  odds_ratio = unname(fisher_result$estimate),
+  power = power,
+  stringsAsFactors = FALSE
+)
+# Add to dataframe
+results <- rbind(results, new_row)
+
+
+########### ONCOGENE DELETIONS ############
+# Make contingency table
+contingency_table <- table(deletion = factor(master_df$onc_del, levels = c("yes","no")), 
+                           cancer = factor(master_df$cancer, levels = c("yes","no")))
+# Extract counts from the table
+cancer_cnv <- contingency_table["yes", "yes"]    # deletions YES & cancer YES
+cancer_nocnv <- contingency_table["no", "yes"]   # deletions NO & cancer YES  
+nocancer_cnv <- contingency_table["yes", "no"]   # deletions YES & cancer NO
+nocancer_nocnv <- contingency_table["no", "no"]  # deletions NO & cancer NO
+# Extract counts from the table
+cancer_cnv <- contingency_table["yes", "yes"]    # deletions YES & cancer YES
+cancer_nocnv <- contingency_table["no", "yes"]   # deletions NO & cancer YES  
+nocancer_cnv <- contingency_table["yes", "no"]   # deletions YES & cancer NO
+nocancer_nocnv <- contingency_table["no", "no"]  # deletions NO & cancer NO
+# Run Fisher's exact test
+fisher_result <- fisher.test(contingency_table, alternative = "greater")
+## POWER ANALYSIS
+# counts
+n1 <- sum(contingency_table["yes", ])
+n2 <- sum(contingency_table["no", ])
+# proportions of cancer
+p1 <- contingency_table["yes", "yes"] / n1  # tsg_del = yes
+p2 <- contingency_table["no", "yes"] / n2   # tsg_del = no
+power <- power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "greater"  # matches your Fisher's test alternative
+)
+#effect size
+p1-p2
+
+# Create new row with results
+new_row <- data.frame(
+  test = "ONC_deletion",
+  cancer_cnv = cancer_cnv,
+  cancer_nocnv = cancer_nocnv,
+  nocancer_cnv = nocancer_cnv,
+  nocancer_nocnv = nocancer_nocnv,
+  p_value = fisher_result$p.value,
+  odds_ratio = unname(fisher_result$estimate),
+  power = power,
+  stringsAsFactors = FALSE
+)
+# Add to dataframe
+results <- rbind(results, new_row)
+
+
+
+########### ONCOGENE DRIVER DELETIONS ############
+# Make contingency table
+contingency_table <- table(deletion = factor(master_df$driver_onc_del, levels = c("yes","no")), 
+                           cancer = factor(master_df$cancer, levels = c("yes","no")))
+# Extract counts from the table
+cancer_cnv <- contingency_table["yes", "yes"]    # deletions YES & cancer YES
+cancer_nocnv <- contingency_table["no", "yes"]   # deletions NO & cancer YES  
+nocancer_cnv <- contingency_table["yes", "no"]   # deletions YES & cancer NO
+nocancer_nocnv <- contingency_table["no", "no"]  # deletions NO & cancer NO
+# Run Fisher's exact test
+fisher_result <- fisher.test(contingency_table, alternative = "greater")
+
+## POWER ANALYSIS
+# counts
+n1 <- sum(contingency_table["yes", ])
+n2 <- sum(contingency_table["no", ])
+# proportions of cancer
+p1 <- contingency_table["yes", "yes"] / n1  # tsg_del = yes
+p2 <- contingency_table["no", "yes"] / n2   # tsg_del = no
+
+power <- power.fisher.test(
+  p1 = p1,
+  p2 = p2,
+  n1 = n1,
+  n2 = n2,
+  alpha = 0.05,
+  nsim = 10000,
+  alternative = "greater"  # matches your Fisher's test alternative
+)
+
+#effect size
+p1-p2
+
+# Create new row with results
+new_row <- data.frame(
+  test = "driverONC_deletion",
+  cancer_cnv = cancer_cnv,
+  cancer_nocnv = cancer_nocnv,
+  nocancer_cnv = nocancer_cnv,
+  nocancer_nocnv = nocancer_nocnv,
+  p_value = fisher_result$p.value,
+  odds_ratio = unname(fisher_result$estimate),
+  power = power,
+  stringsAsFactors = FALSE
+)
+# Add to dataframe
+results <- rbind(results, new_row)
+
+###########
+### WRITE RESULTS
+write.table(results, "cds_TSG_onc_fisher_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
