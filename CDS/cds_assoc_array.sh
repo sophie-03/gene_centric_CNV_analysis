@@ -6,6 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --array=1-100
 #SBATCH --nice=10000
+#SBATCH -D /data4/smatthews/pheWAS/CDS
 
 module load Anaconda3/2024.02-1
 conda activate cnvGWAS
