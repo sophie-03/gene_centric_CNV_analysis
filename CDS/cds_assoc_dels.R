@@ -41,7 +41,7 @@ cds_results <- data.frame(
   model_summary$coefficients["has_cds_deletion", ],
   stringsAsFactors = FALSE
 )
-cds_results <- cds_results[, c("gene", "Estimate", "Std.Error", "z.value", "Pr(>|z|)")]
+#cds_results <- cds_results[, c("gene", "Estimate", "Std..Error", "z.value", "Pr...z..")]
 
 # Generate output filename for each group
 output_file <- paste("group_", group_id, "/temp_logistic.txt", sep = "")
