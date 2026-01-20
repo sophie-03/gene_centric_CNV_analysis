@@ -40,7 +40,7 @@ awk -v num_groups="$num_groups" -v lines_per_group="$lines_per_group" '
 while read -r gene
 do
     # Create a temp file for the current group
-    grep "$gene" /data4/smatthews/pheWAS/CDS/cds_summary.txt > "group_$SLURM_ARRAY_TASK_ID/temp_cnvs.rawcnv"
+    grep -w "$gene" /data4/smatthews/pheWAS/CDS/cds_summary.txt > "group_$SLURM_ARRAY_TASK_ID/temp_cnvs.rawcnv"
 
     # Process the boundary with the R script
     Rscript /data4/smatthews/pheWAS/github_gene_centric_cnv_analysis/CDS/cds_assoc_dels.R "group_$SLURM_ARRAY_TASK_ID/temp_cnvs.rawcnv" "$SLURM_ARRAY_TASK_ID" "${PHENOTYPE}"
