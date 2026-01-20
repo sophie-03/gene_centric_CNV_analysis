@@ -10,27 +10,28 @@ Input must be in bed format - one file containing cnvs and one containing genes.
 Run:  
 ```overlap.sh genes.bed cnvs.bed```
 
-### Example input:  
+<br/> 
   
-#### *genes.bed*:  
-**Columns**: chr, gene start, gene end, ensembl ID, strand, gene name.  
-| chr1 | 13182960 | 13184326 | ENSG00000179412 | -1 | HNRNPCP5 | 
-|-|-|-|-|-|-|
-
+>### Example input:  
+>  
+>#### *genes.bed*:  
+>**Columns**: chr, gene start, gene end, ensembl ID, strand, gene name.  
+>| chr1 | 13182960 | 13184326 | ENSG00000179412 | -1 | HNRNPCP5 | 
+>|-|-|-|-|-|-|
+>  
+>#### *cnvs.bed*:  
+>**Columns:** chr, cnv start, cnv end, strand, sample ID.  
+>| chr1 | 13176463 | 13186401 | 1 | *sample ID* | 
+>|-|-|-|-|-|  
   
-#### *cnvs.bed*:  
-**Columns:** chr, cnv start, cnv end, strand, sample ID.  
-| chr1 | 13176463 | 13186401 | 1 | *sample ID* | 
-|-|-|-|-|-|  
-
+<br/> 
   
-### Example output:  
-**Columns:** chr, gene start, gene end, ensembl ID, strand, gene name, chr, cnv start, cnv end, strand, sample ID.
+>### Example output:  
+>**Columns:** chr, gene start, gene end, ensembl ID, strand, gene name, chr, cnv start, cnv end, strand, sample ID.
+>|chr1 |13182960   |13184326 |ENSG00000179412| -1 |HNRNPCP5|chr1|13176463  |13186401|1   |  249238   |
+>|-----|-----------|---------|-----------|--------|------|------|----------|--------|----|-----------|
   
-|chr1 |13182960   |13184326 |ENSG00000179412| -1 |HNRNPCP5|chr1|13176463  |13186401|1   |  249238   |
-|-----|-----------|---------|-----------|--------|------|------|----------|--------|----|-----------|
-  
-  
+<br/> 
   
 ## Step 2: Genome-wide association  
 
