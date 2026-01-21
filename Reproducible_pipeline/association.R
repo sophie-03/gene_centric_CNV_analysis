@@ -17,7 +17,7 @@ colnames(cn) <- c("chr","geneStart", "geneEnd", "EnsemblID", "strand", "gene",
                      "chro", "cnvStart", "cnvEnd", "cn", "IID")
 
 # print the gene
-print(paste("Processing gene:", unique(cn$gene))
+print(paste("Processing gene:", unique(cn$gene)))
 
 # add phenotype column to covariates df
 covariates$cases <- ifelse(covariates$IID %in% cases$V1, 1, 0)
