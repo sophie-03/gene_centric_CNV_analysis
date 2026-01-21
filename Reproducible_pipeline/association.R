@@ -8,12 +8,16 @@ phenotype_file <- args[3]
 covariate_file <- args[4]
 type <- args[5]
 
+
 # Read in data
 covariates <- read.table(covariate_file, header = TRUE)
 cases <- read.table(phenotype_file)
 cn <- read.table(input_file, header = FALSE)
 colnames(cn) <- c("chr","geneStart", "geneEnd", "EnsemblID", "strand", "gene",
                      "chro", "cnvStart", "cnvEnd", "cn", "IID")
+
+# print the gene
+print(paste("Processing gene:", unique(cn$gene))
 
 # add phenotype column to covariates df
 covariates$cases <- ifelse(covariates$IID %in% cases$V1, 1, 0)
