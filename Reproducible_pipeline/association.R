@@ -46,7 +46,7 @@ logistic_model <- speedglm(formula, data = merged_df, family = binomial())
 # Get the summary of the logistic regression model
 model_summary <- summary(logistic_model)
 
-cds_results <- data.frame(
+cn_results <- data.frame(
   gene = unique(cn$gene),  # Add gene
   model_summary$coefficients["cn", ],
   stringsAsFactors = FALSE
