@@ -6,15 +6,16 @@
 #SBATCH --ntasks=1
 #SBATCH --array=1-100
 
-conda activate phewas
+conda activate cnvGWAS
 
 ## get command line arguments
-phenotype_file=$1
-overlap_file=$2
+overlap_file=$1
+phenotype_file=$2
 covariate_file=$3
+type=$4
 
 ## create list of genes
-awk '{print $6}' intersect_genes_cnvs.txt | sort -u > genes.txt
+awk '{print $6}' "$overlap_file" | sort -u > genes.txt
 
 
 ## Define the number of parallel groups you want to create
@@ -41,7 +42,7 @@ do
     grep -w "$gene" $overlap_file > "group_$SLURM_ARRAY_TASK_ID/temp_cnvs.txt"
 
     # Process the boundary with the R script
-    Rscript association.R "group_$SLURM_ARRAY_TASK_ID/temp_cnvs.txt" "$SLURM_ARRAY_TASK_ID" "$phenotype_file"
+    Rscript association.R "group_$SLURM_ARRAY_TASK_ID/temp_cnvs.txt" "$SLURM_ARRAY_TASK_ID" "$phenotype_file" "$covariate_file" "$type"
 
     # Clean up the temp_cnv.rawcnv file
     rm -f "group_$SLURM_ARRAY_TASK_ID/temp_cnvs.txt"
