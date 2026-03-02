@@ -103,6 +103,14 @@ indvs_with_donc_del <- driver_oncs_in_cnvs$UKB_id[driver_oncs_in_cnvs$cn < 2]
 # now add to master_df
 master_df$driver_onc_del <- ifelse(master_df$UKB_id %in% indvs_with_donc_del, "yes", "no")
 
+#set up for log reg
+#covariates 
+covariates <- read.table("/data4/smatthews/cnv_paper_data/covariates.txt", header = TRUE)
+master_df <- left_join(master_df, covariates, by = c("UKB_id"="IID"))
+#results_df
+results_df <- read.table("/data4/smatthews/cnv_paper_data/log_reg_results.txt", 
+                         header = TRUE)
+
 # make df to store results
 results <- data.frame(
   test = character(0), 
@@ -162,6 +170,24 @@ new_row <- data.frame(
 # Add to dataframe
 results <- rbind(results, new_row)
 
+#logreg
+#logistic regression
+master_df$tsg_del <- factor(master_df$tsg_del, levels = c("no", "yes"))
+master_df$cancer <- factor(master_df$cancer, levels = c("no", "yes"))
+model <- glm(cancer ~ tsg_del + age + sex + PC1 + PC2 + PC3 + PC4 + batch + smoke + bmi, 
+             data = master_df, 
+             family = binomial(link = "logit"))
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[9, ] <- list(
+  test = "tsg_cds_deletions",
+  estimate = coef_summary["tsg_delyes", "Estimate"],
+  std_error = coef_summary["tsg_delyes", "Std. Error"],
+  z_value = coef_summary["tsg_delyes", "z value"],
+  p_value = coef_summary["tsg_delyes", "Pr(>|z|)"]
+)
 
 
 ########### TSG DRIVER DELETIONS ############
@@ -212,6 +238,24 @@ new_row <- data.frame(
 # Add to dataframe
 results <- rbind(results, new_row)
 
+#logreg
+#logistic regression
+master_df$driver_tsg_del <- factor(master_df$driver_tsg_del, levels = c("no", "yes"))
+master_df$cancer <- factor(master_df$cancer, levels = c("no", "yes"))
+model <- glm(cancer ~ driver_tsg_del + age + sex + PC1 + PC2 + PC3 + PC4 + batch + smoke + bmi, 
+             data = master_df, 
+             family = binomial(link = "logit"))
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[10, ] <- list(
+  test = "drivertsg_cds_deletions",
+  estimate = coef_summary["driver_tsg_delyes", "Estimate"],
+  std_error = coef_summary["driver_tsg_delyes", "Std. Error"],
+  z_value = coef_summary["driver_tsg_delyes", "z value"],
+  p_value = coef_summary["driver_tsg_delyes", "Pr(>|z|)"]
+)
 
 ########### ONCOGENE DELETIONS ############
 # Make contingency table
@@ -263,6 +307,25 @@ new_row <- data.frame(
 # Add to dataframe
 results <- rbind(results, new_row)
 
+#logreg
+#logistic regression
+master_df$onc_del <- factor(master_df$onc_del, levels = c("no", "yes"))
+master_df$cancer <- factor(master_df$cancer, levels = c("no", "yes"))
+model <- glm(cancer ~ onc_del + age + sex + PC1 + PC2 + PC3 + PC4 + batch + smoke + bmi, 
+             data = master_df, 
+             family = binomial(link = "logit"))
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[11, ] <- list(
+  test = "onc_cds_deletions",
+  estimate = coef_summary["onc_delyes", "Estimate"],
+  std_error = coef_summary["onc_delyes", "Std. Error"],
+  z_value = coef_summary["onc_delyes", "z value"],
+  p_value = coef_summary["onc_delyes", "Pr(>|z|)"]
+)
+
 
 
 ########### ONCOGENE DRIVER DELETIONS ############
@@ -313,6 +376,26 @@ new_row <- data.frame(
 # Add to dataframe
 results <- rbind(results, new_row)
 
+#logreg
+#logistic regression
+master_df$driver_onc_del <- factor(master_df$driver_onc_del, levels = c("no", "yes"))
+master_df$cancer <- factor(master_df$cancer, levels = c("no", "yes"))
+model <- glm(cancer ~ driver_onc_del + age + sex + PC1 + PC2 + PC3 + PC4 + batch + smoke + bmi, 
+             data = master_df, 
+             family = binomial(link = "logit"))
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[12, ] <- list(
+  test = "driveronc_cds_deletions",
+  estimate = coef_summary["driver_onc_delyes", "Estimate"],
+  std_error = coef_summary["driver_onc_delyes", "Std. Error"],
+  z_value = coef_summary["driver_onc_delyes", "z value"],
+  p_value = coef_summary["driver_onc_delyes", "Pr(>|z|)"]
+)
+
 ###########
 ### WRITE RESULTS
 write.table(results, "cds_TSG_onc_fisher_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+write.table(results_df, "/data4/smatthews/cnv_paper_data/log_reg_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
