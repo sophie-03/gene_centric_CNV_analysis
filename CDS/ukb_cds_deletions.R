@@ -419,3 +419,92 @@ results_df[10, ] <- list(
 )
 
 
+## ONCOGENES
+oncs_summary <- oncs_in_cnvs %>%
+  group_by(UKB_id) %>%
+  summarise(
+    # Count different types of events
+    n_hom_del = sum(cn == 0, na.rm = TRUE),
+    n_het_del = sum(cn == 1, na.rm = TRUE),
+    # Binary indicators
+    has_del = any(cn<= 1),
+    
+    # Total burden scores
+    total_del_burden = sum(cn < 2, na.rm = TRUE),
+    total_dup_burden = sum(cn > 2, na.rm = TRUE),
+    
+    # Genes affected (for sensitivity analyses)
+    genes_deleted = paste(unique(gene[cn < 2]), collapse = ";"),
+  )
+
+oncs_summary <- left_join(oncs_summary,cancer, by = "UKB_id")
+oncs_summary$cancer[is.na(oncs_summary$cancer)] <- "no"
+oncs_summary <- left_join(oncs_summary, covariates, by = c("UKB_id"="IID"))
+oncs_summary$cancer <- factor(oncs_summary$cancer, levels = c("no", "yes"))
+
+
+## DELETIONS
+model <- glm(cancer ~ has_del+ age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = oncs_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[11, ] <- list(
+  test = "oncs_cds_deletions",
+  estimate = coef_summary["has_delTRUE", "Estimate"],
+  std_error = coef_summary["has_delTRUE", "Std. Error"],
+  z_value = coef_summary["has_delTRUE", "z value"],
+  p_value = coef_summary["has_delTRUE", "Pr(>|z|)"]
+)
+
+
+
+# drivers
+driver_oncs_summary <- driver_oncs_in_cnvs %>%
+  group_by(UKB_id) %>%
+  summarise(
+    # Count different types of events
+    n_hom_del = sum(cn == 0, na.rm = TRUE),
+    n_het_del = sum(cn == 1, na.rm = TRUE),
+
+    # Binary indicators
+    has_del = any(cn<= 1),
+    
+    # Total burden scores
+    total_del_burden = sum(cn < 2, na.rm = TRUE),
+    total_dup_burden = sum(cn > 2, na.rm = TRUE),
+    
+    # Genes affected (for sensitivity analyses)
+    genes_deleted = paste(unique(gene[cn < 2]), collapse = ";"),
+  )
+
+
+driver_oncs_summary <- left_join(driver_oncs_summary,cancer, by = "UKB_id")
+driver_oncs_summary$cancer[is.na(driver_oncs_summary$cancer)] <- "no"
+driver_oncs_summary <- left_join(driver_oncs_summary, covariates, by = c("UKB_id"="IID"))
+driver_oncs_summary$cancer <- factor(driver_oncs_summary$cancer, levels = c("no", "yes"))
+
+
+## DELETIONS
+model <- glm(cancer ~ has_del + age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = driver_oncs_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[12, ] <- list(
+  test = "driveroncs_cds_deletions",
+  estimate = coef_summary["has_delTRUE", "Estimate"],
+  std_error = coef_summary["has_delTRUE", "Std. Error"],
+  z_value = coef_summary["has_delTRUE", "z value"],
+  p_value = coef_summary["has_delTRUE", "Pr(>|z|)"]
+)
+
+
+## RESULTS
+write.table(log_reg_results, "log_reg_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
