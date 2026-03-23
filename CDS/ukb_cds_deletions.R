@@ -170,24 +170,7 @@ new_row <- data.frame(
 # Add to dataframe
 results <- rbind(results, new_row)
 
-#logreg
-#logistic regression
-master_df$tsg_del <- factor(master_df$tsg_del, levels = c("no", "yes"))
-master_df$cancer <- factor(master_df$cancer, levels = c("no", "yes"))
-model <- glm(cancer ~ tsg_del + age + sex + PC1 + PC2 + PC3 + PC4 + batch + smoke + bmi, 
-             data = master_df, 
-             family = binomial(link = "logit"))
-summary(model)
-# Get the coefficient summary
-coef_summary <- summary(model)$coefficients
-# Add the row for tsg_del_count
-results_df[9, ] <- list(
-  test = "tsg_cds_deletions",
-  estimate = coef_summary["tsg_delyes", "Estimate"],
-  std_error = coef_summary["tsg_delyes", "Std. Error"],
-  z_value = coef_summary["tsg_delyes", "z value"],
-  p_value = coef_summary["tsg_delyes", "Pr(>|z|)"]
-)
+
 
 
 ########### TSG DRIVER DELETIONS ############
@@ -238,24 +221,6 @@ new_row <- data.frame(
 # Add to dataframe
 results <- rbind(results, new_row)
 
-#logreg
-#logistic regression
-master_df$driver_tsg_del <- factor(master_df$driver_tsg_del, levels = c("no", "yes"))
-master_df$cancer <- factor(master_df$cancer, levels = c("no", "yes"))
-model <- glm(cancer ~ driver_tsg_del + age + sex + PC1 + PC2 + PC3 + PC4 + batch + smoke + bmi, 
-             data = master_df, 
-             family = binomial(link = "logit"))
-summary(model)
-# Get the coefficient summary
-coef_summary <- summary(model)$coefficients
-# Add the row for tsg_del_count
-results_df[10, ] <- list(
-  test = "drivertsg_cds_deletions",
-  estimate = coef_summary["driver_tsg_delyes", "Estimate"],
-  std_error = coef_summary["driver_tsg_delyes", "Std. Error"],
-  z_value = coef_summary["driver_tsg_delyes", "z value"],
-  p_value = coef_summary["driver_tsg_delyes", "Pr(>|z|)"]
-)
 
 ########### ONCOGENE DELETIONS ############
 # Make contingency table
@@ -307,25 +272,6 @@ new_row <- data.frame(
 # Add to dataframe
 results <- rbind(results, new_row)
 
-#logreg
-#logistic regression
-master_df$onc_del <- factor(master_df$onc_del, levels = c("no", "yes"))
-master_df$cancer <- factor(master_df$cancer, levels = c("no", "yes"))
-model <- glm(cancer ~ onc_del + age + sex + PC1 + PC2 + PC3 + PC4 + batch + smoke + bmi, 
-             data = master_df, 
-             family = binomial(link = "logit"))
-summary(model)
-# Get the coefficient summary
-coef_summary <- summary(model)$coefficients
-# Add the row for tsg_del_count
-results_df[11, ] <- list(
-  test = "onc_cds_deletions",
-  estimate = coef_summary["onc_delyes", "Estimate"],
-  std_error = coef_summary["onc_delyes", "Std. Error"],
-  z_value = coef_summary["onc_delyes", "z value"],
-  p_value = coef_summary["onc_delyes", "Pr(>|z|)"]
-)
-
 
 
 ########### ONCOGENE DRIVER DELETIONS ############
@@ -376,26 +322,100 @@ new_row <- data.frame(
 # Add to dataframe
 results <- rbind(results, new_row)
 
-#logreg
-#logistic regression
-master_df$driver_onc_del <- factor(master_df$driver_onc_del, levels = c("no", "yes"))
-master_df$cancer <- factor(master_df$cancer, levels = c("no", "yes"))
-model <- glm(cancer ~ driver_onc_del + age + sex + PC1 + PC2 + PC3 + PC4 + batch + smoke + bmi, 
-             data = master_df, 
-             family = binomial(link = "logit"))
-summary(model)
-# Get the coefficient summary
-coef_summary <- summary(model)$coefficients
-# Add the row for tsg_del_count
-results_df[12, ] <- list(
-  test = "driveronc_cds_deletions",
-  estimate = coef_summary["driver_onc_delyes", "Estimate"],
-  std_error = coef_summary["driver_onc_delyes", "Std. Error"],
-  z_value = coef_summary["driver_onc_delyes", "z value"],
-  p_value = coef_summary["driver_onc_delyes", "Pr(>|z|)"]
-)
 
 ###########
 ### WRITE RESULTS
 write.table(results, "cds_TSG_onc_fisher_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
-write.table(results_df, "/data4/smatthews/cnv_paper_data/log_reg_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+
+
+
+
+#############################
+####### LOGISTIC REGRESSION
+
+tsg_summary <- tsgs_in_cnvs %>%
+  group_by(UKB_id) %>%
+  summarise(
+    # Count different types of events
+    n_hom_del = sum(cn == 0, na.rm = TRUE),
+    n_het_del = sum(cn == 1, na.rm = TRUE),
+    # Binary indicators
+    has_del = any(cn<= 1),
+    
+    # Total burden scores
+    total_del_burden = sum(cn < 2, na.rm = TRUE),
+    total_dup_burden = sum(cn > 2, na.rm = TRUE),
+    
+    # Genes affected (for sensitivity analyses)
+    genes_deleted = paste(unique(gene[cn < 2]), collapse = ";"),
+  )
+
+tsg_summary <- left_join(tsg_summary,cancer, by = "UKB_id")
+tsg_summary$cancer[is.na(tsg_summary$cancer)] <- "no"
+tsg_summary <- left_join(tsg_summary, covariates, by = c("UKB_id"="IID"))
+tsg_summary$cancer <- factor(tsg_summary$cancer, levels = c("no", "yes"))
+
+
+## DELETIONS
+model <- glm(cancer ~ has_del+ age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = tsg_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[9, ] <- list(
+  test = "tsg_cds_deletions",
+  estimate = coef_summary["has_delTRUE", "Estimate"],
+  std_error = coef_summary["has_delTRUE", "Std. Error"],
+  z_value = coef_summary["has_delTRUE", "z value"],
+  p_value = coef_summary["has_delTRUE", "Pr(>|z|)"]
+)
+
+
+
+# drivers
+driver_tsg_summary <- drivers_in_cnvs %>%
+  group_by(UKB_id) %>%
+  summarise(
+    # Count different types of events
+    n_hom_del = sum(cn == 0, na.rm = TRUE),
+    n_het_del = sum(cn == 1, na.rm = TRUE),
+
+    # Binary indicators
+    has_del = any(cn<= 1),
+    
+    # Total burden scores
+    total_del_burden = sum(cn < 2, na.rm = TRUE),
+    total_dup_burden = sum(cn > 2, na.rm = TRUE),
+    
+    # Genes affected (for sensitivity analyses)
+    genes_deleted = paste(unique(gene[cn < 2]), collapse = ";"),
+  )
+
+
+driver_tsg_summary <- left_join(driver_tsg_summary,cancer, by = "UKB_id")
+driver_tsg_summary$cancer[is.na(driver_tsg_summary$cancer)] <- "no"
+driver_tsg_summary <- left_join(driver_tsg_summary, covariates, by = c("UKB_id"="IID"))
+driver_tsg_summary$cancer <- factor(driver_tsg_summary$cancer, levels = c("no", "yes"))
+
+
+## DELETIONS
+model <- glm(cancer ~ has_del + age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = driver_tsg_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[10, ] <- list(
+  test = "drivertsg_cds_deletions",
+  estimate = coef_summary["has_delTRUE", "Estimate"],
+  std_error = coef_summary["has_delTRUE", "Std. Error"],
+  z_value = coef_summary["has_delTRUE", "z value"],
+  p_value = coef_summary["has_delTRUE", "Pr(>|z|)"]
+)
+
+
