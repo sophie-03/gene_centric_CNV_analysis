@@ -562,3 +562,273 @@ results <- rbind(results, new_row)
 #################
 ##  WRITE RESULTS
 write.table(results, "tsg_onc_fisher_results.txt", col.names = TRUE, row.names = FALSE, quote = FALSE)
+
+
+
+################################################
+########### LOGISTIC REGRESSION
+###############################################
+
+## TUMOUR SUPPRESSORS
+tsg_summary <- tsgs_in_cnvs %>%
+  group_by(UKB_id) %>%
+  summarise(
+    # Count different types of events
+    n_hom_del = sum(cn == 0, na.rm = TRUE),
+    n_het_del = sum(cn == 1, na.rm = TRUE),
+    n_dup = sum(cn >= 3, na.rm = TRUE),
+    n_high_dup = sum(cn >= 4, na.rm = TRUE),
+    # Binary indicators
+    has_hom_del = any(cn == 0),
+    has_het_del = any(cn == 1),
+    has_del = any(cn<= 1),
+    has_dup = any(cn >= 3),
+    
+    # Total burden scores
+    total_del_burden = sum(cn < 2, na.rm = TRUE),
+    total_dup_burden = sum(cn > 2, na.rm = TRUE),
+    
+    # Genes affected (for sensitivity analyses)
+    genes_deleted = paste(unique(gene[cn < 2]), collapse = ";"),
+    genes_duplicated = paste(unique(gene[cn > 2]), collapse = ";")
+  )
+
+tsg_summary <- left_join(tsg_summary,cancer, by = "UKB_id")
+tsg_summary$cancer[is.na(tsg_summary$cancer)] <- "no"
+tsg_summary <- left_join(tsg_summary, covariates, by = c("UKB_id"="IID"))
+tsg_summary$cancer <- factor(tsg_summary$cancer, levels = c("no", "yes"))
+
+
+## DELETIONS
+model <- glm(cancer ~ has_del+ age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = tsg_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[1, ] <- list(
+  test = "tsg_whole_deletions",
+  estimate = coef_summary["has_delTRUE", "Estimate"],
+  std_error = coef_summary["has_delTRUE", "Std. Error"],
+  z_value = coef_summary["has_delTRUE", "z value"],
+  p_value = coef_summary["has_delTRUE", "Pr(>|z|)"]
+)
+
+## DUPLICATIONS
+model <- glm(cancer ~ has_dup + age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = tsg_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[2, ] <- list(
+  test = "tsg_whole_duplications",
+  estimate = coef_summary["has_dupTRUE", "Estimate"],
+  std_error = coef_summary["has_dupTRUE", "Std. Error"],
+  z_value = coef_summary["has_dupTRUE", "z value"],
+  p_value = coef_summary["has_dupTRUE", "Pr(>|z|)"]
+)
+
+
+driver_tsg_summary <- drivers_in_cnvs %>%
+  group_by(UKB_id) %>%
+  summarise(
+    # Count different types of events
+    n_hom_del = sum(cn == 0, na.rm = TRUE),
+    n_het_del = sum(cn == 1, na.rm = TRUE),
+    n_dup = sum(cn >= 3, na.rm = TRUE),
+    n_high_dup = sum(cn >= 4, na.rm = TRUE),
+    # Binary indicators
+    has_hom_del = any(cn == 0),
+    has_het_del = any(cn == 1),
+    has_del = any(cn<= 1),
+    has_dup = any(cn >= 3),
+    
+    # Total burden scores
+    total_del_burden = sum(cn < 2, na.rm = TRUE),
+    total_dup_burden = sum(cn > 2, na.rm = TRUE),
+    
+    # Genes affected (for sensitivity analyses)
+    genes_deleted = paste(unique(gene[cn < 2]), collapse = ";"),
+    genes_duplicated = paste(unique(gene[cn > 2]), collapse = ";")
+  )
+
+
+driver_tsg_summary <- left_join(driver_tsg_summary,cancer, by = "UKB_id")
+driver_tsg_summary$cancer[is.na(driver_tsg_summary$cancer)] <- "no"
+driver_tsg_summary <- left_join(driver_tsg_summary, covariates, by = c("UKB_id"="IID"))
+driver_tsg_summary$cancer <- factor(driver_tsg_summary$cancer, levels = c("no", "yes"))
+
+
+## DELETIONS
+model <- glm(cancer ~ has_del + age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = driver_tsg_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[3, ] <- list(
+  test = "drivertsg_whole_deletions",
+  estimate = coef_summary["has_delTRUE", "Estimate"],
+  std_error = coef_summary["has_delTRUE", "Std. Error"],
+  z_value = coef_summary["has_delTRUE", "z value"],
+  p_value = coef_summary["has_delTRUE", "Pr(>|z|)"]
+)
+
+## DUPLICATIONS
+model <- glm(cancer ~ has_dup + age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = driver_tsg_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[4, ] <- list(
+  test = "drivertsg_whole_duplications",
+  estimate = coef_summary["has_dupTRUE", "Estimate"],
+  std_error = coef_summary["has_dupTRUE", "Std. Error"],
+  z_value = coef_summary["has_dupTRUE", "z value"],
+  p_value = coef_summary["has_dupTRUE", "Pr(>|z|)"]
+)
+
+
+
+#### ONCOGENES
+oncs_summary <- oncs_in_cnvs %>%
+  group_by(UKB_id) %>%
+  summarise(
+    # Count different types of events
+    n_hom_del = sum(cn == 0, na.rm = TRUE),
+    n_het_del = sum(cn == 1, na.rm = TRUE),
+    n_dup = sum(cn >= 3, na.rm = TRUE),
+    n_high_dup = sum(cn >= 4, na.rm = TRUE),
+    # Binary indicators
+    has_hom_del = any(cn == 0),
+    has_het_del = any(cn == 1),
+    has_del = any(cn<= 1),
+    has_dup = any(cn >= 3),
+    
+    # Total burden scores
+    total_del_burden = sum(cn < 2, na.rm = TRUE),
+    total_dup_burden = sum(cn > 2, na.rm = TRUE),
+    
+    # Genes affected (for sensitivity analyses)
+    genes_deleted = paste(unique(gene[cn < 2]), collapse = ";"),
+    genes_duplicated = paste(unique(gene[cn > 2]), collapse = ";")
+  )
+
+oncs_summary <- left_join(oncs_summary,cancer, by = "UKB_id")
+oncs_summary$cancer[is.na(oncs_summary$cancer)] <- "no"
+oncs_summary <- left_join(oncs_summary, covariates, by = c("UKB_id"="IID"))
+oncs_summary$cancer <- factor(oncs_summary$cancer, levels = c("no", "yes"))
+
+## DELETIONS
+model <- glm(cancer ~ has_del + age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = oncs_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[5, ] <- list(
+  test = "onc_whole_deletions",
+  estimate = coef_summary["has_delTRUE", "Estimate"],
+  std_error = coef_summary["has_delTRUE", "Std. Error"],
+  z_value = coef_summary["has_delTRUE", "z value"],
+  p_value = coef_summary["has_delTRUE", "Pr(>|z|)"]
+)
+
+## DUPLICATIONS
+model <- glm(cancer ~ has_dup + age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = tsg_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[6, ] <- list(
+  test = "onc_whole_duplications",
+  estimate = coef_summary["has_dupTRUE", "Estimate"],
+  std_error = coef_summary["has_dupTRUE", "Std. Error"],
+  z_value = coef_summary["has_dupTRUE", "z value"],
+  p_value = coef_summary["has_dupTRUE", "Pr(>|z|)"]
+)
+
+
+driver_oncs_summary <- driver_oncs_in_cnvs %>%
+  group_by(UKB_id) %>%
+  summarise(
+    # Count different types of events
+    n_hom_del = sum(cn == 0, na.rm = TRUE),
+    n_het_del = sum(cn == 1, na.rm = TRUE),
+    n_dup = sum(cn >= 3, na.rm = TRUE),
+    n_high_dup = sum(cn >= 4, na.rm = TRUE),
+    # Binary indicators
+    has_hom_del = any(cn == 0),
+    has_het_del = any(cn == 1),
+    has_del = any(cn<= 1),
+    has_dup = any(cn >= 3),
+    
+    # Total burden scores
+    total_del_burden = sum(cn < 2, na.rm = TRUE),
+    total_dup_burden = sum(cn > 2, na.rm = TRUE),
+    
+    # Genes affected (for sensitivity analyses)
+    genes_deleted = paste(unique(gene[cn < 2]), collapse = ";"),
+    genes_duplicated = paste(unique(gene[cn > 2]), collapse = ";")
+  )
+
+
+driver_oncs_summary <- left_join(driver_oncs_summary,cancer, by = "UKB_id")
+driver_oncs_summary$cancer[is.na(driver_oncs_summary$cancer)] <- "no"
+driver_oncs_summary <- left_join(driver_oncs_summary, covariates, by = c("UKB_id"="IID"))
+driver_oncs_summary$cancer <- factor(driver_oncs_summary$cancer, levels = c("no", "yes"))
+
+## DELETIONS
+model <- glm(cancer ~ has_del + age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = driver_oncs_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[7, ] <- list(
+  test = "driveronc_whole_deletions",
+  estimate = coef_summary["has_delTRUE", "Estimate"],
+  std_error = coef_summary["has_delTRUE", "Std. Error"],
+  z_value = coef_summary["has_delTRUE", "z value"],
+  p_value = coef_summary["has_delTRUE", "Pr(>|z|)"]
+)
+
+## DUPLICATIONS
+model <- glm(cancer ~ has_dup + age + sex + PC1 + PC2 + PC3 + PC4 + 
+               batch + smoke + bmi, 
+             data = driver_oncs_summary, 
+             family = binomial)
+summary(model)
+# Get the coefficient summary
+coef_summary <- summary(model)$coefficients
+# Add the row for tsg_del_count
+results_df[8, ] <- list(
+  test = "driveronc_whole_duplications",
+  estimate = coef_summary["has_dupTRUE", "Estimate"],
+  std_error = coef_summary["has_dupTRUE", "Std. Error"],
+  z_value = coef_summary["has_dupTRUE", "z value"],
+  p_value = coef_summary["has_dupTRUE", "Pr(>|z|)"]
+)
+
+
+
+#### RESULTS
+write.table(results_df, "~/Documents/PhD/TSGs_oncogenes/Data/log_reg_results.txt", 
+            col.names=TRUE, row.names = FALSE, quote = FALSE)
