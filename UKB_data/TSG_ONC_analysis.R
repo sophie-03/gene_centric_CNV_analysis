@@ -1,5 +1,8 @@
 ## Setup
 
+
+### association between TSG/Onc copy number and cancer from UKB data - Fisher's and logistic regression
+
 #libraries
 library(data.table)
 library(dplyr)
