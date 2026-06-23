@@ -38,6 +38,8 @@ cancer <- filter(cancer, UKB_id %in% all_IDs$UKB_id)
 #add another column for when merge with other dataframes
 cancer$cancer <- "yes"
 
+#read in covariates
+covariates <- read.table("/data4/smatthews/cnv_paper_data/covariates.txt", header = TRUE)
 
 ## DRIVER MUTATIONS
 drivers <- read.csv("driver_genes_Bailey2018.csv", sep = ",")
@@ -572,6 +574,16 @@ write.table(results, "tsg_onc_fisher_results.txt", col.names = TRUE, row.names =
 ########### LOGISTIC REGRESSION
 ###############################################
 
+# empty results df
+results_df <- data.frame(
+  test = character(),
+  estimate = numeric(),
+  std_error = numeric(),
+  z_value = numeric(),
+  p_value = numeric(),
+  stringsAsFactors = FALSE
+)
+
 ## TUMOUR SUPPRESSORS
 tsg_summary <- tsgs_in_cnvs %>%
   group_by(UKB_id) %>%
@@ -601,11 +613,46 @@ tsg_summary$cancer[is.na(tsg_summary$cancer)] <- "no"
 tsg_summary <- left_join(tsg_summary, covariates, by = c("UKB_id"="IID"))
 tsg_summary$cancer <- factor(tsg_summary$cancer, levels = c("no", "yes"))
 
+## Add in individuals without a tsg copy number
+tsg_summary_all <- master_df %>%
+  dplyr::select(UKB_id, cancer) %>%
+  left_join(tsg_summary %>% dplyr::select(-cancer), by = "UKB_id") %>%
+  mutate(
+    n_hom_del = ifelse(is.na(n_hom_del), 0, n_hom_del),
+    n_het_del = ifelse(is.na(n_het_del), 0, n_het_del),
+    n_dup = ifelse(is.na(n_dup), 0, n_dup),
+    n_high_dup = ifelse(is.na(n_high_dup), 0, n_high_dup),
+    has_hom_del = ifelse(is.na(has_hom_del), FALSE, has_hom_del),
+    has_het_del = ifelse(is.na(has_het_del), FALSE, has_het_del),
+    has_del = ifelse(is.na(has_del), FALSE, has_del),
+    has_dup = ifelse(is.na(has_dup), FALSE, has_dup),
+    total_del_burden = ifelse(is.na(total_del_burden), 0, total_del_burden),
+    total_dup_burden = ifelse(is.na(total_dup_burden), 0, total_dup_burden),
+    genes_deleted = ifelse(is.na(genes_deleted), "", genes_deleted),
+    genes_duplicated = ifelse(is.na(genes_duplicated), "", genes_duplicated)
+  ) %>%
+  left_join(covariates, by = c("UKB_id" = "IID")) %>%
+  # Combine .x and .y columns using coalesce (takes first non-NA value)
+  mutate(
+    age = coalesce(age.x, age.y),
+    sex = coalesce(sex.x, sex.y),
+    PC1 = coalesce(PC1.x, PC1.y),
+    PC2 = coalesce(PC2.x, PC2.y),
+    PC3 = coalesce(PC3.x, PC3.y),
+    PC4 = coalesce(PC4.x, PC4.y),
+    batch = coalesce(batch.x, batch.y),
+    smoke = coalesce(smoke.x, smoke.y),
+    bmi = coalesce(bmi.x, bmi.y)
+  ) %>%
+  # Remove the .x and .y columns
+  dplyr::select(-ends_with(".x"), -ends_with(".y")) %>%
+  mutate(cancer = factor(cancer, levels = c("no", "yes")))
+
 
 ## DELETIONS
 model <- glm(cancer ~ has_del+ age + sex + PC1 + PC2 + PC3 + PC4 + 
                batch + smoke + bmi, 
-             data = tsg_summary, 
+             data = tsg_summary_all, 
              family = binomial)
 summary(model)
 # Get the coefficient summary
@@ -622,7 +669,7 @@ results_df[1, ] <- list(
 ## DUPLICATIONS
 model <- glm(cancer ~ has_dup + age + sex + PC1 + PC2 + PC3 + PC4 + 
                batch + smoke + bmi, 
-             data = tsg_summary, 
+             data = tsg_summary_all, 
              family = binomial)
 summary(model)
 # Get the coefficient summary
@@ -636,6 +683,8 @@ results_df[2, ] <- list(
   p_value = coef_summary["has_dupTRUE", "Pr(>|z|)"]
 )
 
+
+#### DRIVERS
 
 driver_tsg_summary <- drivers_in_cnvs %>%
   group_by(UKB_id) %>%
@@ -666,11 +715,46 @@ driver_tsg_summary$cancer[is.na(driver_tsg_summary$cancer)] <- "no"
 driver_tsg_summary <- left_join(driver_tsg_summary, covariates, by = c("UKB_id"="IID"))
 driver_tsg_summary$cancer <- factor(driver_tsg_summary$cancer, levels = c("no", "yes"))
 
+## Add in individuals without a tsg copy number
+driver_tsg_summary_all <- master_df %>%
+  dplyr::select(UKB_id, cancer) %>%
+  left_join(driver_tsg_summary %>% dplyr::select(-cancer), by = "UKB_id") %>%
+  mutate(
+    n_hom_del = ifelse(is.na(n_hom_del), 0, n_hom_del),
+    n_het_del = ifelse(is.na(n_het_del), 0, n_het_del),
+    n_dup = ifelse(is.na(n_dup), 0, n_dup),
+    n_high_dup = ifelse(is.na(n_high_dup), 0, n_high_dup),
+    has_hom_del = ifelse(is.na(has_hom_del), FALSE, has_hom_del),
+    has_het_del = ifelse(is.na(has_het_del), FALSE, has_het_del),
+    has_del = ifelse(is.na(has_del), FALSE, has_del),
+    has_dup = ifelse(is.na(has_dup), FALSE, has_dup),
+    total_del_burden = ifelse(is.na(total_del_burden), 0, total_del_burden),
+    total_dup_burden = ifelse(is.na(total_dup_burden), 0, total_dup_burden),
+    genes_deleted = ifelse(is.na(genes_deleted), "", genes_deleted),
+    genes_duplicated = ifelse(is.na(genes_duplicated), "", genes_duplicated)
+  ) %>%
+  left_join(covariates, by = c("UKB_id" = "IID")) %>%
+  # Combine .x and .y columns using coalesce (takes first non-NA value)
+  mutate(
+    age = coalesce(age.x, age.y),
+    sex = coalesce(sex.x, sex.y),
+    PC1 = coalesce(PC1.x, PC1.y),
+    PC2 = coalesce(PC2.x, PC2.y),
+    PC3 = coalesce(PC3.x, PC3.y),
+    PC4 = coalesce(PC4.x, PC4.y),
+    batch = coalesce(batch.x, batch.y),
+    smoke = coalesce(smoke.x, smoke.y),
+    bmi = coalesce(bmi.x, bmi.y)
+  ) %>%
+  # Remove the .x and .y columns
+  dplyr::select(-ends_with(".x"), -ends_with(".y")) %>%
+  mutate(cancer = factor(cancer, levels = c("no", "yes")))
+
 
 ## DELETIONS
 model <- glm(cancer ~ has_del + age + sex + PC1 + PC2 + PC3 + PC4 + 
                batch + smoke + bmi, 
-             data = driver_tsg_summary, 
+             data = driver_tsg_summary_all, 
              family = binomial)
 summary(model)
 # Get the coefficient summary
@@ -687,7 +771,7 @@ results_df[3, ] <- list(
 ## DUPLICATIONS
 model <- glm(cancer ~ has_dup + age + sex + PC1 + PC2 + PC3 + PC4 + 
                batch + smoke + bmi, 
-             data = driver_tsg_summary, 
+             data = driver_tsg_summary_all, 
              family = binomial)
 summary(model)
 # Get the coefficient summary
@@ -732,10 +816,46 @@ oncs_summary$cancer[is.na(oncs_summary$cancer)] <- "no"
 oncs_summary <- left_join(oncs_summary, covariates, by = c("UKB_id"="IID"))
 oncs_summary$cancer <- factor(oncs_summary$cancer, levels = c("no", "yes"))
 
+## Add in individuals without a variable copy number
+oncs_summary_all <- master_df %>%
+  dplyr::select(UKB_id, cancer) %>%
+  left_join(oncs_summary %>% dplyr::select(-cancer), by = "UKB_id") %>%
+  mutate(
+    n_hom_del = ifelse(is.na(n_hom_del), 0, n_hom_del),
+    n_het_del = ifelse(is.na(n_het_del), 0, n_het_del),
+    n_dup = ifelse(is.na(n_dup), 0, n_dup),
+    n_high_dup = ifelse(is.na(n_high_dup), 0, n_high_dup),
+    has_hom_del = ifelse(is.na(has_hom_del), FALSE, has_hom_del),
+    has_het_del = ifelse(is.na(has_het_del), FALSE, has_het_del),
+    has_del = ifelse(is.na(has_del), FALSE, has_del),
+    has_dup = ifelse(is.na(has_dup), FALSE, has_dup),
+    total_del_burden = ifelse(is.na(total_del_burden), 0, total_del_burden),
+    total_dup_burden = ifelse(is.na(total_dup_burden), 0, total_dup_burden),
+    genes_deleted = ifelse(is.na(genes_deleted), "", genes_deleted),
+    genes_duplicated = ifelse(is.na(genes_duplicated), "", genes_duplicated)
+  ) %>%
+  left_join(covariates, by = c("UKB_id" = "IID")) %>%
+  # Combine .x and .y columns using coalesce (takes first non-NA value)
+  mutate(
+    age = coalesce(age.x, age.y),
+    sex = coalesce(sex.x, sex.y),
+    PC1 = coalesce(PC1.x, PC1.y),
+    PC2 = coalesce(PC2.x, PC2.y),
+    PC3 = coalesce(PC3.x, PC3.y),
+    PC4 = coalesce(PC4.x, PC4.y),
+    batch = coalesce(batch.x, batch.y),
+    smoke = coalesce(smoke.x, smoke.y),
+    bmi = coalesce(bmi.x, bmi.y)
+  ) %>%
+  # Remove the .x and .y columns
+  dplyr::select(-ends_with(".x"), -ends_with(".y")) %>%
+  mutate(cancer = factor(cancer, levels = c("no", "yes")))
+
+
 ## DELETIONS
 model <- glm(cancer ~ has_del + age + sex + PC1 + PC2 + PC3 + PC4 + 
                batch + smoke + bmi, 
-             data = oncs_summary, 
+             data = oncs_summary_all, 
              family = binomial)
 summary(model)
 # Get the coefficient summary
@@ -752,7 +872,7 @@ results_df[5, ] <- list(
 ## DUPLICATIONS
 model <- glm(cancer ~ has_dup + age + sex + PC1 + PC2 + PC3 + PC4 + 
                batch + smoke + bmi, 
-             data = tsg_summary, 
+             data = oncs_summary_all, 
              family = binomial)
 summary(model)
 # Get the coefficient summary
@@ -766,6 +886,7 @@ results_df[6, ] <- list(
   p_value = coef_summary["has_dupTRUE", "Pr(>|z|)"]
 )
 
+## DRIVERS
 
 driver_oncs_summary <- driver_oncs_in_cnvs %>%
   group_by(UKB_id) %>%
@@ -796,10 +917,45 @@ driver_oncs_summary$cancer[is.na(driver_oncs_summary$cancer)] <- "no"
 driver_oncs_summary <- left_join(driver_oncs_summary, covariates, by = c("UKB_id"="IID"))
 driver_oncs_summary$cancer <- factor(driver_oncs_summary$cancer, levels = c("no", "yes"))
 
+## Add in individuals without a variable copy number
+driver_oncs_summary_all <- master_df %>%
+  dplyr::select(UKB_id, cancer) %>%
+  left_join(driver_oncs_summary %>% dplyr::select(-cancer), by = "UKB_id") %>%
+  mutate(
+    n_hom_del = ifelse(is.na(n_hom_del), 0, n_hom_del),
+    n_het_del = ifelse(is.na(n_het_del), 0, n_het_del),
+    n_dup = ifelse(is.na(n_dup), 0, n_dup),
+    n_high_dup = ifelse(is.na(n_high_dup), 0, n_high_dup),
+    has_hom_del = ifelse(is.na(has_hom_del), FALSE, has_hom_del),
+    has_het_del = ifelse(is.na(has_het_del), FALSE, has_het_del),
+    has_del = ifelse(is.na(has_del), FALSE, has_del),
+    has_dup = ifelse(is.na(has_dup), FALSE, has_dup),
+    total_del_burden = ifelse(is.na(total_del_burden), 0, total_del_burden),
+    total_dup_burden = ifelse(is.na(total_dup_burden), 0, total_dup_burden),
+    genes_deleted = ifelse(is.na(genes_deleted), "", genes_deleted),
+    genes_duplicated = ifelse(is.na(genes_duplicated), "", genes_duplicated)
+  ) %>%
+  left_join(covariates, by = c("UKB_id" = "IID")) %>%
+  # Combine .x and .y columns using coalesce (takes first non-NA value)
+  mutate(
+    age = coalesce(age.x, age.y),
+    sex = coalesce(sex.x, sex.y),
+    PC1 = coalesce(PC1.x, PC1.y),
+    PC2 = coalesce(PC2.x, PC2.y),
+    PC3 = coalesce(PC3.x, PC3.y),
+    PC4 = coalesce(PC4.x, PC4.y),
+    batch = coalesce(batch.x, batch.y),
+    smoke = coalesce(smoke.x, smoke.y),
+    bmi = coalesce(bmi.x, bmi.y)
+  ) %>%
+  # Remove the .x and .y columns
+  dplyr::select(-ends_with(".x"), -ends_with(".y")) %>%
+  mutate(cancer = factor(cancer, levels = c("no", "yes")))
+
 ## DELETIONS
 model <- glm(cancer ~ has_del + age + sex + PC1 + PC2 + PC3 + PC4 + 
                batch + smoke + bmi, 
-             data = driver_oncs_summary, 
+             data = driver_oncs_summary_all, 
              family = binomial)
 summary(model)
 # Get the coefficient summary
@@ -816,7 +972,7 @@ results_df[7, ] <- list(
 ## DUPLICATIONS
 model <- glm(cancer ~ has_dup + age + sex + PC1 + PC2 + PC3 + PC4 + 
                batch + smoke + bmi, 
-             data = driver_oncs_summary, 
+             data = driver_oncs_summary_all, 
              family = binomial)
 summary(model)
 # Get the coefficient summary
